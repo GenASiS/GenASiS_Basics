@@ -1,0 +1,15 @@
+# Makefile for generic linux with NAG compiler and generic MPI 
+# such as openmpi, mpich, etc.
+
+FORTRAN_COMPILE      = mpif90 -c
+FORTRAN_PREPROCESSOR = -fpp
+FORTRAN_BOUND_CHECK  = -C
+FORTRAN_DEBUG        = -g -gline
+FORTRAN_OPTIMIZE     = -O3
+FORTRAN_PROFILE      = 
+
+LINK = mpif90
+
+#-- Silo library include and link line flag and location
+INCLUDE_SILO = -I/usr/local/silo/4.8/nag/include
+LIBRARY_SILO = -L/usr/local/silo/4.8/nag/lib -lsilo

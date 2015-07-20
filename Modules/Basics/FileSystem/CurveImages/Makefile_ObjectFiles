@@ -1,0 +1,3 @@
+CURVE_IMAGES = \
+  CurveImage_Form.o \
+  CurveImages.o

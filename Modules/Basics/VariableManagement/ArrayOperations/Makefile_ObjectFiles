@@ -1,0 +1,6 @@
+ARRAY_OPERATIONS = \
+  Clear_Command.o \
+  Copy_Command.o \
+  Sort_Command.o \
+  Search_Command.o \
+  ArrayOperations.o

@@ -1,0 +1,21 @@
+VariableGroup_Form.o: \
+  Specifiers.o \
+  ArrayOperations.o \
+  ArrayArrays.o \
+  VariableGroup_Form.f90
+
+PackedVariableGroup_Form.o: \
+  Specifiers.o \
+  VariableGroup_Form.o \
+  PackedVariableGroup_Form.f90
+
+VariableGroupArrayMetadata_Form.o: \
+  Specifiers.o \
+  VariableGroup_Form.o \
+  VariableGroupArrayMetadata_Form.f90
+
+VariableGroups.o: \
+  VariableGroup_Form.o \
+  PackedVariableGroup_Form.o \
+  VariableGroupArrayMetadata_Form.o \
+  VariableGroups.f90 \

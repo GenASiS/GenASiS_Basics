@@ -1,0 +1,105 @@
+PATH_GENASIS = ../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  WallTime_Function_Test CommandLineOptions_Form_Test \
+  GetMemoryUsage_Command_Test PROGRAM_HEADER_Singleton_Test \
+  IncomingOutgoingMessageArray_Forms_Test
+
+WallTime_Function_Test: WallTime_Function_Test.o
+	$(LINK) $(FLAGS) \
+          -o WallTime_Function_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          WallTime_Function.o WallTime_Function_Test.o $(LIBRARIES)
+
+CommandLineOptions_Form_Test: CommandLineOptions_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o CommandLineOptions_Form_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) $(FILE_SYSTEM) \
+          CommandLineOptions_Form.o CommandLineOptions_Form_Test.o \
+          $(LIBRARIES)
+
+GetMemoryUsage_Command_Test: GetMemoryUsage_Command_Test.o
+	$(LINK) $(FLAGS) \
+          -o GetMemoryUsage_Command_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) $(FILE_SYSTEM) \
+          CommandLineOptions_Form.o GetMemoryUsage_Command.o \
+          GetMemoryUsage_Command_Test.o \
+          $(LIBRARIES)
+
+PROGRAM_HEADER_Singleton_Test : PROGRAM_HEADER_Singleton_Test.o
+	$(LINK) $(FLAGS) \
+          -o PROGRAM_HEADER_Singleton_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) $(FILE_SYSTEM) \
+          WallTime_Function.o CommandLineOptions_Form.o \
+          GetMemoryUsage_Command.o PROGRAM_HEADER_Singleton.o \
+          PROGRAM_HEADER_Singleton_Test.o \
+          $(LIBRARIES)
+
+IncomingOutgoingMessageArray_Forms_Test: \
+  IncomingOutgoingMessageArray_Forms_Test.o
+	$(LINK) $(FLAGS) \
+          -o IncomingOutgoingMessageArray_Forms_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) $(FILE_SYSTEM) \
+          WallTime_Function.o CommandLineOptions_Form.o \
+          GetMemoryUsage_Command.o PROGRAM_HEADER_Singleton.o \
+          IncomingOutgoingMessageArray_Forms_Test.o \
+          $(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f WallTime_Function_Test_*
+	rm -f CommandLineOptions_Form_Test_*
+	rm -f GetMemoryUsage_Command_Test_*
+	rm -f PROGRAM_HEADER_Singleton_Test_*
+	rm -f IncomingOutgoingMessageArray_Forms_Test_*
+
+include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
+include $(PATH_DISPLAY)/Makefile_Dependencies
+include $(PATH_MESSAGE_PASSING)/Makefile_Dependencies
+include $(PATH_FILE_SYSTEM)/Makefile_Dependencies
+include $(PATH_RUNTIME)/Makefile_Dependencies
+
+WallTime_Function_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  WallTime_Function.o \
+  WallTime_Function_Test.f90
+
+CommandLineOptions_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  CommandLineOptions_Form.o \
+  CommandLineOptions_Form_Test.f90
+
+GetMemoryUsage_Command_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  CommandLineOptions_Form.o \
+  GetMemoryUsage_Command.o \
+  GetMemoryUsage_Command_Test.f90
+
+PROGRAM_HEADER_Singleton_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  FileSystem.o \
+  WallTime_Function.o \
+  CommandLineOptions_Form.o \
+  GetMemoryUsage_Command.o \
+  PROGRAM_HEADER_Singleton.o \
+  PROGRAM_HEADER_Singleton_Test.f90
+
+IncomingOutgoingMessageArray_Forms_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  FileSystem.o \
+  PROGRAM_HEADER_Singleton.o \
+  IncomingOutgoingMessageArray_Forms_Test.f90

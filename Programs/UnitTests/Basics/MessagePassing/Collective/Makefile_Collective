@@ -1,0 +1,54 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  REDUCTION_Singleton_Test CollectiveOperation_Form_Test
+
+REDUCTION_Singleton_Test: REDUCTION_Singleton_Test.o
+	$(LINK) $(FLAGS) \
+          -o REDUCTION_Singleton_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING_BASICS) \
+	  REDUCTION_Singleton.o REDUCTION_Singleton_Test.o
+
+CollectiveOperation_Form_Test: CollectiveOperation_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o CollectiveOperation_Form_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING_BASICS) \
+	  $(POINT_TO_POINT) REDUCTION_Singleton.o \
+          CollectiveOperation_Template.o \
+          CollectiveOperationInteger_Form.o \
+          CollectiveOperationBigInteger_Form.o \
+          CollectiveOperationReal_Form.o CollectiveOperationComplex_Form.o \
+	  CollectiveOperation_Form_Test.o
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f REDUCTION_Singleton_Test_*
+	rm -f CollectiveOperation_Form_Test_*
+
+include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
+include $(PATH_DISPLAY)/Makefile_Dependencies
+include $(PATH_MESSAGE_PASSING_BASICS)/Makefile_Dependencies
+include $(PATH_POINT_TO_POINT)/Makefile_Dependencies
+include $(PATH_COLLECTIVE)/Makefile_Dependencies
+
+REDUCTION_Singleton_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  REDUCTION_Singleton.o \
+  REDUCTION_Singleton_Test.f90
+
+CollectiveOperation_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  REDUCTION_Singleton.o \
+  CollectiveOperationInteger_Form.o \
+  CollectiveOperationBigInteger_Form.o \
+  CollectiveOperationReal_Form.o \
+  CollectiveOperationComplex_Form.o \
+  CollectiveOperation_Form_Test.f90

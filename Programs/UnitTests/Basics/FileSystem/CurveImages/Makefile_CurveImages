@@ -1,0 +1,48 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  CurveImage_ASCII__Form_Test CurveImageSilo_Form_Test  
+
+CurveImage_ASCII__Form_Test: CurveImage_ASCII__Form_Test.o
+	$(LINK) $(FLAGS) -o CurveImage_ASCII__Form_Test_$(MACHINE) \
+	  $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          $(FILE_SYSTEM_BASICS) $(GRID_IMAGE_BASICS) CurveImage_ASCII__Form.o \
+          CurveImage_ASCII__Form_Test.o $(LIBRARIES)
+
+CurveImageSilo_Form_Test: CurveImageSilo_Form_Test.o
+	$(LINK) $(FLAGS) -o CurveImageSilo_Form_Test_$(MACHINE) \
+	  $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          $(FILE_SYSTEM_BASICS) $(GRID_IMAGE_BASICS) CurveImageSilo_Form.o \
+          CurveImageSilo_Form_Test.o $(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f CurveImage_ASCII__Form_Test_*
+	rm -f CurveImageSilo_Form_Test_*
+
+include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
+include $(PATH_DISPLAY)/Makefile_Dependencies
+include $(PATH_MESSAGE_PASSING)/Makefile_Dependencies
+include $(PATH_FILE_SYSTEM_BASICS)/Makefile_Dependencies
+include $(PATH_GRID_IMAGE_BASICS)/Makefile_Dependencies
+include $(PATH_CURVE_IMAGES)/Makefile_Dependencies
+
+CurveImageSilo_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  GridImageStreamSilo_Form.o \
+  CurveImageSilo_Form.o \
+  CurveImageSilo_Form_Test.f90
+
+CurveImage_ASCII__Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  GridImageStream_ASCII__Form.o \
+  CurveImage_ASCII__Form.o \
+  CurveImage_ASCII__Form_Test.f90

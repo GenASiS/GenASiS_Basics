@@ -1,0 +1,3 @@
+STRUCTURED_GRID_IMAGES = \
+  StructuredGridImage_Form.o \
+  StructuredGridImages.o

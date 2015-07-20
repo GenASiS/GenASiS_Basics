@@ -1,0 +1,60 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  VariableGroup_Form_Test PackedVariableGroup_Form_Test \
+  VariableGroupArrayMetadata_Form_Test
+
+VariableGroup_Form_Test: VariableGroup_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o VariableGroup_Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) $(ARRAY_ARRAYS) \
+          VariableGroup_Form.o VariableGroup_Form_Test.o
+
+PackedVariableGroup_Form_Test: PackedVariableGroup_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o PackedVariableGroup_Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) $(ARRAY_ARRAYS) \
+          VariableGroup_Form.o PackedVariableGroup_Form.o \
+          PackedVariableGroup_Form_Test.o
+
+VariableGroupArrayMetadata_Form_Test: VariableGroupArrayMetadata_Form_Test.o 
+	$(LINK) $(FLAGS) \
+          -o VariableGroupArrayMetadata_Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) $(ARRAY_ARRAYS) \
+          VariableGroup_Form.o VariableGroupArrayMetadata_Form.o \
+          VariableGroupArrayMetadata_Form_Test.o
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f VariableGroup_Form_Test_*
+	rm -f PackedVariableGroup_Form_Test_*
+	rm -f VariableGroupArrayMetadata_Form_Test_*
+
+include $(PATH_SPECIFIERS)/Makefile_Dependencies
+include $(PATH_ARRAY_OPERATIONS)/Makefile_Dependencies
+include $(PATH_ARRAY_ARRAYS)/Makefile_Dependencies
+include $(PATH_VARIABLE_GROUPS)/Makefile_Dependencies
+
+VariableGroup_Form_Test.o: \
+  Specifiers.o \
+  ArrayArrays.o \
+  VariableGroup_Form.o \
+  VariableGroup_Form_Test.f90
+
+PackedVariableGroup_Form_Test.o: \
+  Specifiers.o \
+  ArrayArrays.o \
+  VariableGroup_Form.o \
+  PackedVariableGroup_Form.o \
+  PackedVariableGroup_Form_Test.f90
+
+VariableGroupArrayMetadata_Form_Test.o: \
+  Specifiers.o \
+  ArrayArrays.o \
+  VariableGroup_Form.o \
+  VariableGroupArrayMetadata_Form.o \
+  VariableGroupArrayMetadata_Form_Test.f90

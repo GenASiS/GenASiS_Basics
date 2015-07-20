@@ -1,0 +1,10 @@
+CurveImage_Form.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  GridImageBasics.o \
+  CurveImage_Form.f90
+
+CurveImages.o: \
+  CurveImage_Form.o \
+  CurveImages.f90

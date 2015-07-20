@@ -1,0 +1,90 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  DelayFileAccess_Command_Test ReadLabelValue_Command_Test \
+  FindParameter_Command_Test ParametersStream_Form_Test TableStream_Form_Test
+
+DelayFileAccess_Command_Test: DelayFileAccess_Command_Test.o
+	$(LINK) $(FLAGS) \
+          -o DelayFileAccess_Command_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          DelayFileAccess_Command.o DelayFileAccess_Command_Test.o
+
+ReadLabelValue_Command_Test: ReadLabelValue_Command_Test.o
+	$(LINK) $(FLAGS) \
+          -o ReadLabelValue_Command_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          ReadLabelValue_Command.o ReadLabelValue_Command_Test.o
+
+FindParameter_Command_Test: FindParameter_Command_Test.o
+	$(LINK) $(FLAGS) \
+          -o FindParameter_Command_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          ReadLabelValue_Command.o FindParameter_Command.o \
+          FindParameter_Command_Test.o
+
+ParametersStream_Form_Test: ParametersStream_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ParametersStream_Form_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          DelayFileAccess_Command.o ReadLabelValue_Command.o \
+          FindParameter_Command.o ParametersStream_Form.o \
+          ParametersStream_Form_Test.o
+
+TableStream_Form_Test: TableStream_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o TableStream_Form_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          DelayFileAccess_Command.o TableStream_Form.o \
+          TableStream_Form_Test.o
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f DelayFileAccess_Command_Test_*
+	rm -f ReadLabelValue_Command_Test_*
+	rm -f FindParameter_Command_Test_*
+	rm -f ParametersStream_Form_Test_*
+	rm -f TableStream_Form_Test_*
+
+include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
+include $(PATH_DISPLAY)/Makefile_Dependencies
+include $(PATH_MESSAGE_PASSING)/Makefile_Dependencies
+include $(PATH_FILE_SYSTEM_BASICS)/Makefile_Dependencies
+
+DelayFileAccess_Command_Test.o: \
+  Display.o \
+  MessagePassing.o \
+  DelayFileAccess_Command.o \
+  DelayFileAccess_Command_Test.f90
+
+ReadLabelValue_Command_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  ReadLabelValue_Command.o \
+  ReadLabelValue_Command_Test.f90
+
+FindParameter_Command_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  FindParameter_Command.o \
+  FindParameter_Command_Test.f90
+
+ParametersStream_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  ParametersStream_Form.o \
+  ParametersStream_Form_Test.f90
+
+TableStream_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  TableStream_Form.o \
+  TableStream_Form_Test.f90

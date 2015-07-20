@@ -1,0 +1,49 @@
+ REDUCTION_Singleton.o: \
+   VariableManagement.o \
+   REDUCTION_Singleton.f90
+
+CollectiveOperation_Template.o: \
+  VariableManagement.o \
+  MessagePassingBasics.o \
+  CollectiveOperation_Template.f90
+
+CollectiveOperationInteger_Form.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  PointToPoint.o \
+  CollectiveOperation_Template.o \
+  CollectiveOperationInteger_Form.f90
+
+CollectiveOperationBigInteger_Form.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  PointToPoint.o \
+  CollectiveOperation_Template.o \
+  CollectiveOperationBigInteger_Form.f90
+
+CollectiveOperationReal_Form.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  PointToPoint.o \
+  CollectiveOperation_Template.o \
+  CollectiveOperationReal_Form.f90
+
+CollectiveOperationComplex_Form.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  PointToPoint.o \
+  CollectiveOperation_Template.o \
+  CollectiveOperationComplex_Form.f90
+
+Collective.o: \
+  REDUCTION_Singleton.o \
+  CollectiveOperation_Template.o \
+  CollectiveOperationInteger_Form.o \
+  CollectiveOperationBigInteger_Form.o \
+  CollectiveOperationReal_Form.o \
+  CollectiveOperationComplex_Form.o \
+  Collective.f90

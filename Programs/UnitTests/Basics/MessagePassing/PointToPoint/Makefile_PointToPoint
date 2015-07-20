@@ -1,0 +1,76 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  IncomingOutgoingMessage_Forms_Test IncomingOutgoingMessageArray_Forms_Test
+
+IncomingOutgoingMessage_Forms_Test: IncomingOutgoingMessage_Forms_Test.o
+	$(LINK) $(FLAGS) \
+          -o IncomingOutgoingMessage_Forms_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING_BASICS) \
+	  Message_Template.o MessageInteger_Form.o MessageBigInteger_Form.o \
+	  MessageReal_Form.o MessageComplex_Form.o \
+          IncomingMessageInteger_Form.o IncomingMessageBigInteger_Form.o \
+          IncomingMessageReal_Form.o IncomingMessageComplex_Form.o \
+          OutgoingMessageInteger_Form.o OutgoingMessageBigInteger_Form.o \
+          OutgoingMessageReal_Form.o OutgoingMessageComplex_Form.o \
+          IncomingOutgoingMessage_Forms_Test.o
+
+IncomingOutgoingMessageArray_Forms_Test: IncomingOutgoingMessageArray_Forms_Test.o
+	$(LINK) $(FLAGS) \
+          -o IncomingOutgoingMessageArray_Forms_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING_BASICS) \
+	  Message_Template.o MessageInteger_Form.o MessageBigInteger_Form.o \
+	  MessageReal_Form.o MessageComplex_Form.o \
+          IncomingMessageInteger_Form.o IncomingMessageBigInteger_Form.o \
+          IncomingMessageReal_Form.o IncomingMessageComplex_Form.o \
+          OutgoingMessageInteger_Form.o OutgoingMessageBigInteger_Form.o \
+          OutgoingMessageReal_Form.o OutgoingMessageComplex_Form.o \
+	  MessageArray_Template.o IncomingMessageArrayInteger_Form.o \
+          IncomingMessageArrayBigInteger_Form.o \
+          IncomingMessageArrayReal_Form.o IncomingMessageArrayComplex_Form.o \
+          OutgoingMessageArrayInteger_Form.o \
+          OutgoingMessageArrayBigInteger_Form.o \
+          OutgoingMessageArrayReal_Form.o OutgoingMessageArrayComplex_Form.o \
+	  IncomingOutgoingMessageArray_Forms_Test.o
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f IncomingOutgoingMessage_Forms_Test_*
+	rm -f IncomingOutgoingMessageArray_Forms_Test_*
+
+include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
+include $(PATH_DISPLAY)/Makefile_Dependencies
+include $(PATH_MESSAGE_PASSING_BASICS)/Makefile_Dependencies
+include $(PATH_POINT_TO_POINT)/Makefile_Dependencies
+
+IncomingOutgoingMessage_Forms_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  IncomingMessageInteger_Form.o \
+  IncomingMessageBigInteger_Form.o \
+  IncomingMessageReal_Form.o \
+  IncomingMessageComplex_Form.o \
+  OutgoingMessageInteger_Form.o \
+  OutgoingMessageBigInteger_Form.o \
+  OutgoingMessageReal_Form.o \
+  OutgoingMessageComplex_Form.o \
+  IncomingOutgoingMessage_Forms_Test.f90
+
+IncomingOutgoingMessageArray_Forms_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassingBasics.o \
+  IncomingMessageArrayInteger_Form.o \
+  IncomingMessageArrayBigInteger_Form.o \
+  IncomingMessageArrayReal_Form.o \
+  IncomingMessageArrayComplex_Form.o \
+  OutgoingMessageArrayInteger_Form.o \
+  OutgoingMessageArrayBigInteger_Form.o \
+  OutgoingMessageArrayReal_Form.o \
+  OutgoingMessageArrayComplex_Form.o \
+  IncomingOutgoingMessageArray_Forms_Test.f90

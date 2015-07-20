@@ -1,0 +1,49 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  GridImageStreamGnuplot_Form_Test GridImageStreamSilo_Form_Test
+
+GridImageStreamGnuplot_Form_Test: GridImageStreamGnuplot_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o GridImageStreamGnuplot_Form_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          $(FILE_SYSTEM_BASICS) \
+          GridImageStream_Template.o GridImageStreamGnuplot_Form.o \
+          GridImageStreamGnuplot_Form_Test.o $(LIBRARIES)
+
+GridImageStreamSilo_Form_Test: GridImageStreamSilo_Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o GridImageStreamSilo_Form_Test_$(MACHINE) \
+          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
+          $(FILE_SYSTEM_BASICS) DB_TableOfContentsType_Silo_C.o \
+          GridImageStream_Template.o GridImageStreamSilo_Form.o \
+          GridImageStreamSilo_Form_Test.o $(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f GridImageStreamSilo_Form_Test_*
+
+include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
+include $(PATH_DISPLAY)/Makefile_Dependencies
+include $(PATH_MESSAGE_PASSING)/Makefile_Dependencies
+include $(PATH_FILE_SYSTEM_BASICS)/Makefile_Dependencies
+include $(PATH_GRID_IMAGE_BASICS)/Makefile_Dependencies
+
+GridImageStreamGnuplot_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  GridImageStream_Template.o \
+  GridImageStreamGnuplot_Form.o \
+  GridImageStreamGnuplot_Form_Test.f90
+
+GridImageStreamSilo_Form_Test.o: \
+  VariableManagement.o \
+  Display.o \
+  MessagePassing.o \
+  GridImageStream_Template.o \
+  GridImageStreamSilo_Form.o \
+  GridImageStreamSilo_Form_Test.f90

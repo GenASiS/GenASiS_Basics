@@ -1,0 +1,9 @@
+PointGridImage_Form.o: \
+  VariableManagement.o \
+  Display.o \
+  GridImageBasics.o \
+  PointGridImage_Form.f90
+
+PointGridImages.o:\
+  PointGridImage_Form.o \
+  PointGridImages.f90

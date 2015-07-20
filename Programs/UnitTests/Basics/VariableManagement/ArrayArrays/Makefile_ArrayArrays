@@ -1,0 +1,101 @@
+PATH_GENASIS = ../../../../../..
+
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+all: \
+  ArrayInteger_1D__Form_Test ArrayInteger_2D__Form_Test \
+  ArrayInteger_3D__Form_Test ArrayReal_1D__Form_Test \
+  ArrayReal_2D__Form_Test ArrayReal_3D__Form_Test ArrayCharacter_1D__Form_Test
+
+ArrayInteger_1D__Form_Test: ArrayInteger_1D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayInteger_1D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
+          ArrayInteger_1D__Form.o ArrayInteger_1D__Form_Test.o $(LIBRARIES)
+
+ArrayInteger_2D__Form_Test: ArrayInteger_2D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayInteger_2D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
+          ArrayInteger_2D__Form.o ArrayInteger_2D__Form_Test.o $(LIBRARIES)
+
+ArrayInteger_3D__Form_Test: ArrayInteger_3D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayInteger_3D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
+          ArrayInteger_3D__Form.o ArrayInteger_3D__Form_Test.o $(LIBRARIES)
+
+ArrayReal_1D__Form_Test: ArrayReal_1D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayReal_1D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
+          ArrayReal_1D__Form.o ArrayReal_1D__Form_Test.o $(LIBRARIES)
+
+ArrayReal_2D__Form_Test: ArrayReal_2D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayReal_2D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
+          ArrayReal_2D__Form.o ArrayReal_2D__Form_Test.o $(LIBRARIES)
+
+ArrayReal_3D__Form_Test: ArrayReal_3D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayReal_3D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
+          ArrayReal_3D__Form.o ArrayReal_3D__Form_Test.o $(LIBRARIES)
+
+ArrayCharacter_1D__Form_Test: ArrayCharacter_1D__Form_Test.o
+	$(LINK) $(FLAGS) \
+          -o ArrayCharacter_1D__Form_Test_$(MACHINE) \
+          $(SPECIFIERS) \
+          ArrayCharacter_1D__Form.o ArrayCharacter_1D__Form_Test.o $(LIBRARIES)
+
+clean:
+	rm -f *.o *.mod *.ld
+
+clobber: clean
+	rm -f ArrayInteger_1D__Form_Test_*
+	rm -f ArrayInteger_2D__Form_Test_*
+	rm -f ArrayInteger_3D__Form_Test_*
+	rm -f ArrayReal_1D__Form_Test_*
+	rm -f ArrayReal_2D__Form_Test_*
+	rm -f ArrayReal_3D__Form_Test_*
+	rm -f ArrayCharacter_1D__Form_Test_*
+
+include $(PATH_SPECIFIERS)/Makefile_Dependencies
+include $(PATH_ARRAY_OPERATIONS)/Makefile_Dependencies
+include $(PATH_ARRAY_ARRAYS)/Makefile_Dependencies
+
+ArrayInteger_1D__Form_Test.o: \
+  Specifiers.o \
+  ArrayInteger_1D__Form.o \
+  ArrayInteger_1D__Form_Test.f90
+
+ArrayInteger_2D__Form_Test.o: \
+  Specifiers.o \
+  ArrayInteger_2D__Form.o \
+  ArrayInteger_2D__Form_Test.f90
+
+ArrayInteger_3D__Form_Test.o: \
+  Specifiers.o \
+  ArrayInteger_3D__Form.o \
+  ArrayInteger_3D__Form_Test.f90
+
+ArrayReal_1D__Form_Test.o: \
+  Specifiers.o \
+  ArrayReal_1D__Form.o \
+  ArrayReal_1D__Form_Test.f90
+
+ArrayReal_2D__Form_Test.o: \
+  Specifiers.o \
+  ArrayReal_2D__Form.o \
+  ArrayReal_2D__Form_Test.f90
+
+ArrayReal_3D__Form_Test.o: \
+  Specifiers.o \
+  ArrayReal_3D__Form.o \
+  ArrayReal_3D__Form_Test.f90
+
+ArrayCharacter_1D__Form_Test.o: \
+  Specifiers.o \
+  ArrayCharacter_1D__Form.o \
+  ArrayCharacter_1D__Form_Test.f90

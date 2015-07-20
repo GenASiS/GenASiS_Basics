@@ -1,0 +1,8 @@
+DISPLAY = \
+  ConsoleHeader_Form.o \
+  CONSOLE_Singleton.o \
+  Show_Command.o \
+  ShowInteger.o \
+  ShowCharacter.o \
+  ShowMessage.o \
+  Display.o
