@@ -41,7 +41,7 @@ contains
       MyOriginSum
     type ( CommunicatorForm ), pointer :: &
       C
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
       
     oV = 0
@@ -117,7 +117,7 @@ contains
       MyOriginSum
     type ( CommunicatorForm ), pointer :: &
       C
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
       
     oV = 0
@@ -179,7 +179,7 @@ contains
   
   
   function L1_Norm_VariableGroup &
-             ( VG_Origin, VG_End, CommunicatorOption, SelectedOption, &
+             ( VG_Origin, VG_End, CommunicatorOption, iaSelectedOption, &
                RootOption, nValuesOption, oValueOption ) result ( L1 )
              
     class ( VariableGroupForm ), intent ( in ), target :: &
@@ -188,7 +188,7 @@ contains
     type ( CommunicatorForm ), intent ( in ), optional, target :: &
       CommunicatorOption
     integer ( KDI ), dimension ( : ), intent ( in ), optional, target :: &
-      SelectedOption
+      iaSelectedOption
     integer ( KDI ), intent ( in ), optional :: &
       RootOption, &
       nValuesOption, &
@@ -202,13 +202,13 @@ contains
       oV, &
       nValues
     integer ( KDI ), dimension ( : ), pointer :: &
-      Selected
+      iaSelected
     real ( KDR ), dimension ( : ), allocatable :: &
       MyDistanceSum, &
       MyOriginSum
     type ( CommunicatorForm ), pointer :: &
       C
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
 
     oV = 0
@@ -217,18 +217,18 @@ contains
     nValues = VG_Origin % nValues
     if ( present ( nValuesOption ) ) nValues = nValuesOption
     
-    Selected => VG_Origin % Selected
-    if ( present ( SelectedOption ) ) Selected => SelectedOption
+    iaSelected => VG_Origin % iaSelected
+    if ( present ( iaSelectedOption ) ) iaSelected => iaSelectedOption
     
     C => PROGRAM_HEADER % Communicator
     if ( present ( CommunicatorOption ) ) C => CommunicatorOption
     
-    allocate ( MyDistanceSum ( size ( Selected ) ) )
-    allocate ( MyOriginSum ( size ( Selected ) ) )  
-    allocate ( L1 ( size ( Selected ) ) )
+    allocate ( MyDistanceSum ( size ( iaSelected ) ) )
+    allocate ( MyOriginSum ( size ( iaSelected ) ) )  
+    allocate ( L1 ( size ( iaSelected ) ) )
     
-    do iS = 1, size ( Selected )
-      iVrbl = Selected ( iS )
+    do iS = 1, size ( iaSelected )
+      iVrbl = iaSelected ( iS )
       MyDistanceSum ( iS ) &
         = sum ( abs ( VG_End % Value ( oV + 1 : oV + nValues, iVrbl ) &
                       - VG_Origin % Value ( oV + 1 : oV + nValues, iVrbl ) ) )
@@ -237,7 +237,7 @@ contains
     end do
     
     call CO % Initialize &
-           ( C, [ 2 * size ( Selected ) ], [ 2 * size ( Selected ) ], &
+           ( C, [ 2 * size ( iaSelected ) ], [ 2 * size ( iaSelected ) ], &
              RootOption = RootOption )
     
     CO % Outgoing % Value = [ MyDistanceSum, MyOriginSum ]
@@ -245,9 +245,9 @@ contains
 
     if ( present ( RootOption ) ) then
       if ( C % Rank == RootOption ) then
-        do iS = 1, size ( Selected )
+        do iS = 1, size ( iaSelected )
           MyDistanceSum ( iS ) = CO % Incoming % Value ( iS )
-          MyOriginSum ( iS )  = CO % Incoming % Value ( size ( Selected ) + iS )
+          MyOriginSum ( iS )  = CO % Incoming % Value ( size ( iaSelected ) + iS )
           if ( MyOriginSum ( iS ) /= 0.0_KDR ) then
             L1 ( iS ) = MyDistanceSum ( iS ) / MyOriginSum ( iS )
           else
@@ -258,9 +258,9 @@ contains
         end do
       end if
     else
-      do iS = 1, size ( Selected )
+      do iS = 1, size ( iaSelected )
         MyDistanceSum ( iS ) = CO % Incoming % Value ( iS )
-        MyOriginSum ( iS )  = CO % Incoming % Value ( size ( Selected ) + iS )
+        MyOriginSum ( iS )  = CO % Incoming % Value ( size ( iaSelected ) + iS )
         if ( MyOriginSum ( iS ) /= 0.0_KDR ) then
           L1 ( iS ) = MyDistanceSum ( iS ) / MyOriginSum ( iS )
         else
@@ -272,7 +272,7 @@ contains
     end if
 
     nullify ( C )
-    nullify ( Selected )
+    nullify ( iaSelected )
 
   end function L1_Norm_VariableGroup
   

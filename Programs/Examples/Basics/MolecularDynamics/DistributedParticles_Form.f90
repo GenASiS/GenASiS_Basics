@@ -29,6 +29,8 @@ module DistributedParticles_Form
       nParticles, &
       nMyParticles, &
       nCorrelationBins
+    integer ( KDI ), private :: &
+      iTimer_IO
     real ( KDR ) :: &
       BoxLength, &
       ParticleMass
@@ -47,9 +49,9 @@ module DistributedParticles_Form
       Type = ''
     type ( CommunicatorForm ), pointer :: &
       Communicator => null ( )
-    type ( IncomingMessageRealForm ) :: &
+    type ( MessageIncoming_R_Form ) :: &
       Incoming
-    type ( OutgoingMessageRealForm ) :: &
+    type ( MessageOutgoing_R_Form ) :: &
       Outgoing
     type ( GridImageStreamForm ) :: &
       GridImageStream
@@ -324,6 +326,9 @@ contains
 
     OutputDirectory = '../Output/'
     call PROGRAM_HEADER % GetParameter ( OutputDirectory, 'OutputDirectory' )    
+    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DP % iTimer_IO )
+    
+    call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Start ( )
 
     associate ( GIS => DP % GridImageStream )
     call GIS % Initialize &
@@ -356,6 +361,8 @@ contains
 
     end associate !-- GIS
 
+    call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Stop ( )
+
   end subroutine SetImage
 
 
@@ -368,12 +375,8 @@ contains
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
       
-    type ( MeasuredValueForm ) :: &
-      StartWallTime, &
-      FinishWallTime
+    call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Start ( )
     
-    StartWallTime = WallTime ( )
-     
     associate ( GIS => DP % GridImageStream )
     call GIS % Open ( GIS % ACCESS_CREATE )
 
@@ -413,12 +416,8 @@ contains
     call GIS % Close ( )
     end associate !-- GIS
     
-    FinishWallTime = WallTime ( )
+    call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Stop ( )
     
-    PROGRAM_HEADER % InputOutputWallTime &
-      = PROGRAM_HEADER % InputOutputWallTime &
-          + ( FinishWallTime - StartWallTime )
-
   end subroutine Write
 
 

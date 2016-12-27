@@ -78,7 +78,7 @@ contains
       TimeScale_PE
     real ( KDR ), dimension ( 3 ) :: &
       CenterOfMass
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
 
     select type ( CP => PD % DistributedParticles )

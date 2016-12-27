@@ -9,3 +9,6 @@ VariableManagement.o: \
   ArrayArrays.o \
   VariableGroups.o \
   VariableManagement.f90
+
+VariableManagement.a: $(VARIABLE_MANAGEMENT)
+	ar r VariableManagement.a $(VARIABLE_MANAGEMENT)

@@ -1,6 +1,5 @@
 VARIABLE_GROUPS = \
-  VariableGroup_Form.o \
-  PackedVariableGroup_Form.o \
-  VariableGroupArrayMetadata_Form.o \
   VariableGroups.o \
-  
+  VariableGroup_1D__Form.o \
+  PackedVariableGroup_Form.o \
+  VariableGroup_Form.o

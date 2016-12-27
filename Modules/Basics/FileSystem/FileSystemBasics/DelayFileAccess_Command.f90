@@ -19,7 +19,7 @@ module DelayFileAccess_Command
 contains
 
 
-  pure subroutine DelayFileAccess ( ProcessRank )
+  subroutine DelayFileAccess ( ProcessRank )
 
     integer ( KDI ), intent ( in ) :: &
       ProcessRank
@@ -36,8 +36,8 @@ contains
     
     do iDelay = 1, nFileAccessDelayIterations
       !-- wait my turn
-      Number = Number + 0.01_KDR * 190384.12_KDR
-      Dummy  = Number * 0.035_KDR
+      call random_number ( Number )
+      Dummy = Number * Number
     end do
 
   end subroutine DelayFileAccess

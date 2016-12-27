@@ -1,7 +1,8 @@
 RUNTIME = \
-  WallTime_Function.o \
-  GetMemoryUsage_Command.o \
-  InitializeRandomSeed_Command.o \
-  CommandLineOptions_Form.o \
+  Runtime.o \
   PROGRAM_HEADER_Singleton.o \
-  Runtime.o
+  GetMemoryUsage_Command.o \
+  Timer_Form.o \
+  WallTime_Function.o \
+  CommandLineOptions_Form.o \
+  InitializeRandomSeed_Command.o

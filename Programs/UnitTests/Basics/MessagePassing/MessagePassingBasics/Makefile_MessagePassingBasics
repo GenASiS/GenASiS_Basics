@@ -5,20 +5,21 @@ include $(PATH_GENASIS)/Build/Makefile_Build
 all: \
   Communicator_Form_Test PortalHeader_Form_Test
 
-Communicator_Form_Test: Communicator_Form_Test.o
+Communicator_Form_Test: VariableManagement.a Display.a Communicator_Form_Test.o
 	$(LINK) $(FLAGS) \
           -o Communicator_Form_Test_$(MACHINE) \
-          $(VARIABLE_MANAGEMENT) $(DISPLAY) Communicator_Form.o \
-	  Communicator_Form_Test.o
+          Communicator_Form_Test.o Communicator_Form.o \
+	  Display.a VariableManagement.a
 
-PortalHeader_Form_Test: PortalHeader_Form_Test.o
+PortalHeader_Form_Test: VariableManagement.a Display.a PortalHeader_Form_Test.o
 	$(LINK) $(FLAGS) \
           -o PortalHeader_Form_Test_$(MACHINE) \
-          $(VARIABLE_MANAGEMENT) $(DISPLAY) Communicator_Form.o \
-	  PortalHeader_Form.o PortalHeader_Form_Test.o
+	  PortalHeader_Form_Test.o PortalHeader_Form.o \
+          Communicator_Form.o \
+	  Display.a VariableManagement.a
 
 clean:
-	rm -f *.o *.mod *.ld
+	rm -f *.o *.a *.mod *.ld
 
 clobber: clean
 	rm -f Communicator_Form_Test_*

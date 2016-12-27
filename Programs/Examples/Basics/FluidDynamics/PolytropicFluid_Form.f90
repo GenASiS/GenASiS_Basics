@@ -76,7 +76,7 @@ contains
       ClearOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
 
     character ( LDL ), dimension ( : ), allocatable :: &
@@ -345,7 +345,7 @@ contains
 
     integer ( KDI ) :: &
       iD  !-- iDimension
-    type ( ArrayInteger_1D_Form ), dimension ( 1 ) :: &
+    type ( Integer_1D_Form ), dimension ( 1 ) :: &
       VectorIndices
     real ( KDR ) :: &
       Gamma
@@ -388,7 +388,7 @@ contains
 
     call PF % Output ( 1 ) % Initialize &
            ( PF, &
-             SelectedOption &
+             iaSelectedOption &
                = [ PF % COMOVING_DENSITY, PF % VELOCITY, &
                    PF % PRESSURE ], &
              VectorOption = [ 'Velocity                       ' ], &

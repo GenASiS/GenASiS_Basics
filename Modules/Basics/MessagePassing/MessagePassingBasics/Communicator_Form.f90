@@ -38,8 +38,7 @@ module Communicator_Form
     procedure, public, pass :: &
       Abort => Abort_C  !-- avoids conflict with intrinsic "abort"
     final :: &
-      Finalize, &
-      Finalize_1D
+      Finalize
   end type CommunicatorForm
   
 contains
@@ -160,9 +159,8 @@ contains
 
   end subroutine Abort_C
   
-  !-- FIXME: "impure elemental" is not yet supported by Intel compiler 
-  ! impure elemental subroutine Finalize ( C )
-  subroutine Finalize ( C )
+  
+  impure elemental subroutine Finalize ( C )
 
     type ( CommunicatorForm ), intent ( inout ) :: &
       C
@@ -187,21 +185,6 @@ contains
     C % Initialized = .false.
         
   end subroutine Finalize
-  
-  
-  subroutine Finalize_1D ( C )
-  
-    type ( CommunicatorForm ), dimension ( : ),  intent ( inout ) :: &
-      C
-    
-    integer ( KDI ) :: &
-      iC
-    
-    do iC = 1, size ( C )
-      call Finalize ( C ( iC ) )
-    end do
-  
-  end subroutine Finalize_1D
 
 
 end module Communicator_Form

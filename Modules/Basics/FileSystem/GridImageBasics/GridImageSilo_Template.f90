@@ -14,7 +14,7 @@ module GridImageSilo_Template
   implicit none
   private
   
-  include 'silo.inc'
+  include 'silo_f9x.inc'
 
   type, public, abstract, extends ( GridImageTemplate ) :: &
     GridImageSiloTemplate
@@ -145,11 +145,11 @@ contains
     Dummy_X    = 0.0_KDR
     Dummy_Y    = 0.0_KDR
     DummyValue = 0.0_KDR
-    
+
     WorkingDirectory = GI % Stream % CurrentDirectory
     call GI % Stream % ChangeDirectory ( '/' )
-    
-    HeaderName = trim ( GI % Stream % Name ) // '_Header'
+
+    HeaderName = 'Header'
     lHeaderName = len_trim ( HeaderName )
 
 !-- FIXME: Tweak for NAG 5.3.1    
@@ -413,7 +413,7 @@ contains
     WorkingDirectory = GI % Stream % CurrentDirectory
     call GI % Stream % ChangeDirectory ( '/' )
 
-    HeaderName = trim ( GI % Stream % Name ) // '_Header' // c_null_char
+    HeaderName = 'Header' // c_null_char
     lHeaderName = len_trim ( HeaderName )
 
     DB_File &

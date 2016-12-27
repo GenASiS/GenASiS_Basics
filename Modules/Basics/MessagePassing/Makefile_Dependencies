@@ -7,3 +7,6 @@ MessagePassing.o: \
   PointToPoint.o \
   Collective.o \
   MessagePassing.f90
+
+MessagePassing.a: $(MESSAGE_PASSING)
+	ar r MessagePassing.a $(MESSAGE_PASSING)

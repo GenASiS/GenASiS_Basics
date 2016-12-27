@@ -53,7 +53,7 @@ program ReadLabelValue_Command_Test
     C
 
   allocate ( C )
-  call C % Initialize ( WorldOption = .true. )
+  call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
 
   call UNIT % Initialize ( )
@@ -70,7 +70,8 @@ program ReadLabelValue_Command_Test
   ArrayRealUnitString  &
     = 'ArrayRealUnit=10.5~SECOND,20.5,30.5~MILLISECOND,40.5,50.5~MILLISECOND'
   ArrayMeasuredValueString  &
-    = 'ArrayMeasuredValue=10.5~SECOND,20.5,30.5~MILLISECOND,40.5,50.5~MILLISECOND'
+    = 'ArrayMeasuredValue=10.5~SECOND,20.5,30.5~MILLISECOND,40.5,' &
+      // '50.5~MILLISECOND'
   ArrayLogicalString        = 'ArrayLogical=T,F,False,True,True,F'
   ArrayStringString         = 'ArrayString=Lorem, ipsum, dolor, sit, amet'
   
@@ -89,13 +90,15 @@ program ReadLabelValue_Command_Test
   call ReadLabelValue &
          ( Label, ScalarRealUnitValue, ScalarRealUnitString, &
            InputUnitOption = InputUnit )
-  call Show ( ScalarRealUnitValue, InputUnit, trim ( Label ) // ' input units' )
+  call Show ( ScalarRealUnitValue, InputUnit, trim ( Label ) &
+              // ' input units' )
   call Show ( ScalarRealUnitValue, trim ( Label ) // ', program units' )
   
   call ReadLabelValue &
          ( Label, ScalarMeasuredValue, ScalarMeasuredValueString, &
            InputUnitOption = InputUnit )
-  call Show ( ScalarMeasuredValue, InputUnit, trim ( Label ) // ' input units' )
+  call Show ( ScalarMeasuredValue, InputUnit, trim ( Label ) // &
+              ' input units' )
   call Show ( ScalarMeasuredValue, trim ( Label ) // ', program units' )
   
   call ReadLabelValue ( Label, ScalarLogicalValue, ScalarLogicalString )

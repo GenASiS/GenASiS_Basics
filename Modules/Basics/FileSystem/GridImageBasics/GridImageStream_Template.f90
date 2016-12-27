@@ -34,9 +34,9 @@ module GridImageStream_Template
       MeshBlockFileSuffix, &
       MultiMeshFileSuffix
     character ( LDF ) :: &
-      Name, &
-      Description, &
-      WorkingDirectory
+      Name = '', &
+      Description = '', &
+      WorkingDirectory = ''
     character ( LDF ), dimension ( : ), allocatable :: &
       MeshBlocksPrefix
     logical ( KDL ) :: &
@@ -413,7 +413,7 @@ contains
       if ( GIS % AccessMode == ACCESS_MODE_CREATE ) then
         call GIS % FileCreate ( GIS % MeshBlockHandle, PathName, Error )
       else
-        call GIS % FileOpenRead ( GIS % MeshBlockHandle, PathName, Error )
+        call GIS % FileOpenWrite ( GIS % MeshBlockHandle, PathName, Error )
       end if
         
       if ( GIS % Communicator % Rank == 0 ) then

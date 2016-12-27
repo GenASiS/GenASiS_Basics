@@ -18,7 +18,7 @@ program TableStream_Form_Test
     TS
 
   allocate ( C )
-  call C % Initialize ( WorldOption = .true. )
+  call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
   call CONSOLE % SetVerbosity ( 'INFO_7' )
 

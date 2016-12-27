@@ -17,226 +17,340 @@ module Clear_Command
     module procedure ClearInteger_1D
     module procedure ClearInteger_2D
     module procedure ClearInteger_3D
-    module procedure ClearInteger_4D
-    module procedure ClearBigInteger_1D
-    module procedure ClearBigInteger_2D
-    module procedure ClearBigInteger_3D
-    module procedure ClearBigInteger_4D
+    ! module procedure ClearInteger_4D
+    ! module procedure ClearBigInteger_1D
+    ! module procedure ClearBigInteger_2D
+    ! module procedure ClearBigInteger_3D
+    ! module procedure ClearBigInteger_4D
     module procedure ClearReal_1D
     module procedure ClearReal_2D
     module procedure ClearReal_3D
-    module procedure ClearReal_4D
-    module procedure ClearComplex_1D
-    module procedure ClearComplex_2D
+    ! module procedure ClearReal_4D
+    ! module procedure ClearComplex_1D
+    ! module procedure ClearComplex_2D
     module procedure ClearComplex_3D
-    module procedure ClearComplex_4D
+    ! module procedure ClearComplex_4D
     module procedure ClearLogical_1D
-    module procedure ClearLogical_2D
-    module procedure ClearLogical_3D
-    module procedure ClearLogical_4D
+    ! module procedure ClearLogical_2D
+    ! module procedure ClearLogical_3D
+    ! module procedure ClearLogical_4D
+    ! module procedure ClearTinyLogical_1D
+    ! module procedure ClearTinyLogical_2D
   end interface Clear
 
 contains
 
 
-  pure subroutine ClearInteger_1D ( A )
+  subroutine ClearInteger_1D ( A )
 
     integer ( KDI ), dimension ( : ), intent ( out ) :: &
       A
-    
+
+    !$OMP parallel workshare
     A = 0_KDI
+    !$OMP end parallel workshare
 
   end subroutine ClearInteger_1D
 
   
-  pure subroutine ClearInteger_2D ( A )
+  subroutine ClearInteger_2D ( A )
 
     integer ( KDI ), dimension ( :, : ), intent ( out ) :: &
       A
 
+    !$OMP parallel workshare
     A = 0_KDI
+    !$OMP end parallel workshare
 
   end subroutine ClearInteger_2D
 
 
-  pure subroutine ClearInteger_3D ( A )
+  subroutine ClearInteger_3D ( A )
 
     integer ( KDI ), dimension ( :, :, : ), intent ( out ) :: &
       A
 
+    !$OMP parallel workshare
     A = 0_KDI
+    !$OMP end parallel workshare
 
   end subroutine ClearInteger_3D
 
 
-  pure subroutine ClearInteger_4D ( A )
+  ! subroutine ClearInteger_4D ( A )
 
-    integer ( KDI ), dimension ( :, :, :, : ), intent ( out ) :: &
-      A
+  !   integer ( KDI ), dimension ( :, :, :, : ), intent ( out ) :: &
+  !     A
 
-    A = 0_KDI
+  !   !$OMP parallel workshare
+  !   A = 0_KDI
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearInteger_4D
+  ! end subroutine ClearInteger_4D
 
 
-  pure subroutine ClearBigInteger_1D ( A )
+  ! subroutine ClearBigInteger_1D ( A )
 
-    integer ( KBI ), dimension ( : ), intent ( out ) :: &
-      A
+  !   integer ( KBI ), dimension ( : ), intent ( out ) :: &
+  !     A
     
-    A = 0_KBI
+  !   !$OMP parallel workshare
+  !   A = 0_KBI
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearBigInteger_1D
+  ! end subroutine ClearBigInteger_1D
 
   
-  pure subroutine ClearBigInteger_2D ( A )
+  ! subroutine ClearBigInteger_2D ( A )
 
-    integer ( KBI ), dimension ( :, : ), intent ( out ) :: &
-      A
+  !   integer ( KBI ), dimension ( :, : ), intent ( out ) :: &
+  !     A
 
-    A = 0_KBI
+  !   !$OMP parallel workshare
+  !   A = 0_KBI
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearBigInteger_2D
-
-
-  pure subroutine ClearBigInteger_3D ( A )
-
-    integer ( KBI ), dimension ( :, :, : ), intent ( out ) :: &
-      A
-
-    A = 0_KBI
-
-  end subroutine ClearBigInteger_3D
+  ! end subroutine ClearBigInteger_2D
 
 
-  pure subroutine ClearBigInteger_4D ( A )
+  ! subroutine ClearBigInteger_3D ( A )
 
-    integer ( KBI ), dimension ( :, :, :, : ), intent ( out ) :: &
-      A
+  !   integer ( KBI ), dimension ( :, :, : ), intent ( out ) :: &
+  !     A
 
-    A = 0_KBI
+  !   !$OMP parallel workshare
+  !   A = 0_KBI
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearBigInteger_4D
+  ! end subroutine ClearBigInteger_3D
 
 
-  pure subroutine ClearReal_1D ( A )
+  ! subroutine ClearBigInteger_4D ( A )
+
+  !   integer ( KBI ), dimension ( :, :, :, : ), intent ( out ) :: &
+  !     A
+
+  !   !$OMP parallel workshare
+  !   A = 0_KBI
+  !   !$OMP end parallel workshare
+
+  ! end subroutine ClearBigInteger_4D
+
+
+  subroutine ClearReal_1D ( A )
 
     real ( KDR ), dimension ( : ), intent ( out ) :: &
       A
 
-    A = 0.0_KDR
+    integer ( KDI ) :: &
+      iV, &
+      nV
+
+    nV = size ( A )
+
+    !$OMP parallel do private ( iV )
+    do iV = 1, nV
+      A ( iV ) = 0.0_KDR
+    end do
+    !$OMP end parallel do
 
   end subroutine ClearReal_1D
   
   
-  pure subroutine ClearReal_2D ( A )
+  subroutine ClearReal_2D ( A )
 
     real ( KDR ), dimension ( :, : ), intent ( out ) :: &
       A
 
-    A = 0.0_KDR
+    integer ( KDI ) :: &
+      iV, &
+      nV
 
+    nV = size ( A, dim = 2 )
+
+    do iV = 1, nV
+      call Clear ( A ( :, iV ) )
+    end do
+  
   end subroutine ClearReal_2D
   
   
-  pure subroutine ClearReal_3D ( A )
+  subroutine ClearReal_3D ( A )
 
     real ( KDR ), dimension ( :, :, : ), intent ( out ) :: &
       A
 
-    A = 0.0_KDR
+    integer ( KDI ) :: &
+      iV, jV, kV
+    integer ( KDI ), dimension ( 3 ) :: &
+      nV
+
+    nV = shape ( A )
+
+    !$OMP parallel do private ( iV, jV, kV )
+    do kV = 1, nV ( 3 )
+      do jV = 1, nV ( 2 )
+        do iV = 1, nV ( 1 )
+          A ( iV, jV, kV ) = 0.0_KDR
+        end do
+      end do
+    end do
+    !$OMP end parallel do
 
   end subroutine ClearReal_3D
   
   
-  pure subroutine ClearReal_4D ( A )
+  ! subroutine ClearReal_4D ( A )
 
-    real ( KDR ), dimension ( :, :, :, : ), intent ( out ) :: &
-      A
+  !   real ( KDR ), dimension ( :, :, :, : ), intent ( out ) :: &
+  !     A
 
-    A = 0.0_KDR
+  !   !$OMP parallel workshare
+  !   A = 0.0_KDR
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearReal_4D
+  ! end subroutine ClearReal_4D
   
   
-  pure subroutine ClearComplex_1D ( A )
+  ! subroutine ClearComplex_1D ( A )
 
-    complex ( KDC ), dimension ( : ), intent ( out ) :: &
-       A
+  !   complex ( KDC ), dimension ( : ), intent ( out ) :: &
+  !      A
 
-     A = 0.0_KDC
+  !   !$OMP parallel workshare
+  !    A = 0.0_KDC
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearComplex_1D
-
-
-  pure subroutine ClearComplex_2D ( A )
-
-    complex ( KDC ), dimension ( :, : ), intent ( out ) :: &
-       A
-
-     A = 0.0_KDC
-
-  end subroutine ClearComplex_2D
+  ! end subroutine ClearComplex_1D
 
 
-  pure subroutine ClearComplex_3D ( A )
+  ! subroutine ClearComplex_2D ( A )
+
+  !   complex ( KDC ), dimension ( :, : ), intent ( out ) :: &
+  !      A
+
+  !   !$OMP parallel workshare
+  !    A = 0.0_KDC
+  !   !$OMP end parallel workshare
+
+  ! end subroutine ClearComplex_2D
+
+
+  subroutine ClearComplex_3D ( A )
 
     complex ( KDC ), dimension ( :, :, : ), intent ( out ) :: &
        A
 
-     A = 0.0_KDC
+    integer ( KDI ) :: &
+      iV, jV, kV
+    integer ( KDI ), dimension ( 3 ) :: &
+      nV
+
+    nV = shape ( A )
+
+    !$OMP parallel do private ( iV, jV, kV )
+    do kV = 1, nV ( 3 )
+      do jV = 1, nV ( 2 )
+        do iV = 1, nV ( 1 )
+          A ( iV, jV, kV ) = 0.0_KDC
+        end do
+      end do
+    end do
+    !$OMP end parallel do
 
   end subroutine ClearComplex_3D
 
 
-  pure subroutine ClearComplex_4D ( A )
+  ! subroutine ClearComplex_4D ( A )
 
-    complex ( KDC ), dimension ( :, :, :, : ), intent ( out ) :: &
-       A
+  !   complex ( KDC ), dimension ( :, :, :, : ), intent ( out ) :: &
+  !      A
 
-     A = 0.0_KDC
+  !   !$OMP parallel workshare
+  !    A = 0.0_KDC
+  !   !$OMP end parallel workshare
 
-   end subroutine ClearComplex_4D
+  !  end subroutine ClearComplex_4D
 
 
-  pure subroutine ClearLogical_1D ( A )
+  subroutine ClearLogical_1D ( A )
 
     logical ( KDL ), dimension ( : ), intent ( out ) :: &
       A
 
-    A = .false.
+    integer ( KDI ) :: &
+      iV, &
+      nV
+
+    nV = size ( A )
+
+    !$OMP parallel do private ( iV )
+    do iV = 1, nV
+      A ( iV ) = .false.
+    end do
+    !$OMP end parallel do
 
   end subroutine ClearLogical_1D
   
   
-  pure subroutine ClearLogical_2D ( A )
+  ! subroutine ClearLogical_2D ( A )
 
-    logical ( KDL ), dimension ( :, : ), intent ( out ) :: &
-      A
+  !   logical ( KDL ), dimension ( :, : ), intent ( out ) :: &
+  !     A
 
-    A = .false.
+  !   !$OMP parallel workshare
+  !   A = .false.
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearLogical_2D
+  ! end subroutine ClearLogical_2D
   
   
-  pure subroutine ClearLogical_3D ( A )
+  ! subroutine ClearLogical_3D ( A )
 
-    logical ( KDL ), dimension ( :, :, : ), intent ( out ) :: &
-      A
+  !   logical ( KDL ), dimension ( :, :, : ), intent ( out ) :: &
+  !     A
 
-    A = .false.
+  !   !$OMP parallel workshare
+  !   A = .false.
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearLogical_3D
+  ! end subroutine ClearLogical_3D
   
   
-  pure subroutine ClearLogical_4D ( A )
+  ! subroutine ClearLogical_4D ( A )
 
-    logical ( KDL ), dimension ( :, :, :, : ), intent ( out ) :: &
-      A
+  !   logical ( KDL ), dimension ( :, :, :, : ), intent ( out ) :: &
+  !     A
 
-    A = .false.
+  !   !$OMP parallel workshare
+  !   A = .false.
+  !   !$OMP end parallel workshare
 
-  end subroutine ClearLogical_4D
+  ! end subroutine ClearLogical_4D
+  
+  
+  ! subroutine ClearTinyLogical_1D ( A )
+
+  !   logical ( KTL ), dimension ( : ), intent ( out ) :: &
+  !     A
+
+  !   !$OMP parallel workshare
+  !   A = .false.
+  !   !$OMP end parallel workshare
+
+  ! end subroutine ClearTinyLogical_1D
+  
+  
+  ! subroutine ClearTinyLogical_2D ( A )
+
+  !   logical ( KTL ), dimension ( :, : ), intent ( out ) :: &
+  !     A
+
+  !   !$OMP parallel workshare
+  !   A = .false.
+  !   !$OMP end parallel workshare
+
+  ! end subroutine ClearTinyLogical_2D
   
   
 end module Clear_Command

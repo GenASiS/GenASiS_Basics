@@ -1,35 +1,36 @@
 PATH_GENASIS = ../../../../..
 
-include $(PATH_GENASIS)/Build/Makefile_Build
-
 all: SineWaveAdvection SawtoothWaveAdvection RiemannProblem
 
-SineWaveAdvection: SineWaveAdvection.o
+include $(PATH_GENASIS)/Build/Makefile_Build
+
+FLUID = \
+  PolytropicFluid_Form.o \
+  PressurelessFluid_Form.o \
+  ConservationLawEvolution_Template.o \
+  ConservationLawStep_Form.o \
+  ConservedFields_Template.o \
+  DistributedMesh_Form.o
+
+SineWaveAdvection: Basics.a Fluid.a SineWaveAdvection.o
 	$(LINK) $(FLAGS) \
           -o SineWaveAdvection_$(MACHINE) \
-          $(BASICS) DistributedMesh_Form.o ConservedFields_Template.o \
-          ConservationLawStep_Form.o ConservationLawEvolution_Template.o \
-          PressurelessFluid_Form.o PlaneWaveAdvection_Template.o \
-          SineWaveAdvection_Form.o SineWaveAdvection.o \
-          $(LIBRARIES)
+          SineWaveAdvection.o SineWaveAdvection_Form.o \
+          PlaneWaveAdvection_Template.o \
+          Fluid.a Basics.a $(LIBRARIES)
 
-SawtoothWaveAdvection: SawtoothWaveAdvection.o
+SawtoothWaveAdvection: Basics.a Fluid.a SawtoothWaveAdvection.o
 	$(LINK) $(FLAGS) \
           -o SawtoothWaveAdvection_$(MACHINE) \
-          $(BASICS) DistributedMesh_Form.o ConservedFields_Template.o \
-          ConservationLawStep_Form.o ConservationLawEvolution_Template.o \
-          PressurelessFluid_Form.o PlaneWaveAdvection_Template.o \
-          SawtoothWaveAdvection_Form.o SawtoothWaveAdvection.o \
-          $(LIBRARIES)
+          SawtoothWaveAdvection.o SawtoothWaveAdvection_Form.o \
+          PlaneWaveAdvection_Template.o \
+          Fluid.a Basics.a $(LIBRARIES)
 
-RiemannProblem: RiemannProblem.o
+RiemannProblem: Basics.a Fluid.a RiemannProblem.o
 	$(LINK) $(FLAGS) \
           -o RiemannProblem_$(MACHINE) \
-          $(BASICS) DistributedMesh_Form.o ConservedFields_Template.o \
-          ConservationLawStep_Form.o ConservationLawEvolution_Template.o \
-          PressurelessFluid_Form.o PolytropicFluid_Form.o \
-          RiemannProblem_Form.o RiemannProblem.o \
-          $(LIBRARIES)
+          RiemannProblem.o RiemannProblem_Form.o \
+          Fluid.a Basics.a $(LIBRARIES)
 
 clean:
 	rm -f *.o *.mod *.ld
@@ -74,6 +75,9 @@ PolytropicFluid_Form.o: \
   DistributedMesh_Form.o \
   PressurelessFluid_Form.o \
   PolytropicFluid_Form.f90
+
+Fluid.a: $(FLUID)
+	ar r Fluid.a $(FLUID)
 
 PlaneWaveAdvection_Template.o: \
   Basics.o \

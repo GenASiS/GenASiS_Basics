@@ -7,3 +7,6 @@ PointGridImage_Form.o: \
 PointGridImages.o:\
   PointGridImage_Form.o \
   PointGridImages.f90
+
+PointGridImages.a: $(POINT_GRID_IMAGES)
+	ar r PointGridImages.a $(POINT_GRID_IMAGES)

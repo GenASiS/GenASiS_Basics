@@ -17,7 +17,7 @@ program WallTime_Function_Test
     C
 
   allocate ( C )
-  call C % Initialize ( WorldOption = .true. )
+  call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
 
   WallTimeStart = WallTime ( )

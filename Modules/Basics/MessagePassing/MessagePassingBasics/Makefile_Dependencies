@@ -12,3 +12,6 @@ MessagePassingBasics.o: \
   Communicator_Form.o \
   PortalHeader_Form.o \
   MessagePassingBasics.f90
+
+MessagePassingBasics.a: $(MESSAGE_PASSING_BASICS)
+	ar r MessagePassingBasics.a $(MESSAGE_PASSING_BASICS)

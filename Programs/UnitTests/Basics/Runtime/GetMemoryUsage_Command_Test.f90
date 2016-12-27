@@ -29,7 +29,7 @@ program GetMemoryUsage_Command_Test
     CLO
 
   allocate ( C )
-  call C % Initialize ( WorldOption = .true. )
+  call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
   
   call CLO % Initialize ( ) 
@@ -53,7 +53,7 @@ program GetMemoryUsage_Command_Test
   
   call Show ( 'Getting memory usage', CONSOLE % INFO_1 )
   call GetMemoryUsage &
-         ( C, HighWaterMark, ResidentSetSize, &
+         ( HighWaterMark, ResidentSetSize, C_Option = C, &
            Max_HWM_Option = AcrossProcessesMaxHighWaterMark, &
            Min_HWM_Option = AcrossProcessesMinHighWaterMark, &
            Mean_HWM_Option = AcrossProcessesMeanHighWaterMark, &

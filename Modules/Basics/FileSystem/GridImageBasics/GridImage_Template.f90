@@ -11,7 +11,7 @@ module GridImage_Template
   private
   
   integer, private, parameter :: &
-    MAX_VARIABLE_GROUPS = 1024  
+    MAX_VARIABLE_GROUPS = 16 
 
   type, public, abstract :: GridImageTemplate
     integer ( KDI ) :: &
@@ -38,47 +38,54 @@ module GridImage_Template
       InitializeTemplate
     procedure, public, pass :: &
       AddVariableGroup
-    procedure ( WriteMultiMeshInterface ), public, pass, deferred :: &
-      WriteMultiMesh
-    procedure ( WriteMultiVariableInterface ), public, pass, deferred :: &
-      WriteMultiVariable
+    procedure, public, pass :: &
+      ClearVariableGroups
+    !-- FIXME: Removed the following deferred procedures (and their 
+    !          interfaces) to avoid multiple definition error during linking
+    !          with Cray compiler (CCE). These deferredn procesdures will only
+    !          be needed when there is another backend for GridImage
+    !          (beside Silo)
+    !procedure ( WriteMultiMeshInterface ), public, pass, deferred :: &
+    !  WriteMultiMesh
+    !procedure ( WriteMultiVariableInterface ), public, pass, deferred :: &
+    !  WriteMultiVariable
   end type GridImageTemplate
   
-  
-  abstract interface 
-    
-    subroutine WriteMultiMeshInterface &
-                 ( GI, Name, TimeOption, CycleNumberOption, HideOption )
-      use VariableManagement
-      import GridImageTemplate
-      class ( GridImageTemplate ), intent ( inout ) :: &
-        GI
-      character ( * ), intent ( in ) :: &
-        Name
-      type ( MeasuredValueForm ), intent ( in ), optional :: &
-        TimeOption
-      integer ( KDI ), intent ( in ), optional :: &
-        CycleNumberOption
-      logical ( KDL ), intent ( in ), optional :: &
-        HideOption
-    end subroutine WriteMultiMeshInterface
-    
-    
-    subroutine WriteMultiVariableInterface &
-                 ( GI, Name, TimeOption, CycleNumberOption )
-      use VariableManagement
-      import GridImageTemplate
-      class ( GridImageTemplate ), intent ( inout ) :: &
-        GI
-      character ( * ), intent ( in ) :: &
-        Name
-      type ( MeasuredValueForm ), intent ( in ), optional :: &
-        TimeOption
-      integer ( KDI ), intent ( in ), optional :: &
-        CycleNumberOption
-    end subroutine WriteMultiVariableInterface
-  
-  end interface
+  !-- See FIXME above
+  !abstract interface 
+  !  
+  !  subroutine WriteMultiMeshInterface &
+  !               ( GI, Name, TimeOption, CycleNumberOption, HideOption )
+  !    use VariableManagement
+  !    import GridImageTemplate
+  !    class ( GridImageTemplate ), intent ( inout ) :: &
+  !      GI
+  !    character ( * ), intent ( in ) :: &
+  !      Name
+  !    type ( MeasuredValueForm ), intent ( in ), optional :: &
+  !      TimeOption
+  !    integer ( KDI ), intent ( in ), optional :: &
+  !      CycleNumberOption
+  !    logical ( KDL ), intent ( in ), optional :: &
+  !      HideOption
+  !  end subroutine WriteMultiMeshInterface
+  !  
+  !  
+  !  subroutine WriteMultiVariableInterface &
+  !               ( GI, Name, TimeOption, CycleNumberOption )
+  !    use VariableManagement
+  !    import GridImageTemplate
+  !    class ( GridImageTemplate ), intent ( inout ) :: &
+  !      GI
+  !    character ( * ), intent ( in ) :: &
+  !      Name
+  !    type ( MeasuredValueForm ), intent ( in ), optional :: &
+  !      TimeOption
+  !    integer ( KDI ), intent ( in ), optional :: &
+  !      CycleNumberOption
+  !  end subroutine WriteMultiVariableInterface
+  !
+  !end interface
   
   
 contains
@@ -112,6 +119,20 @@ contains
     call GI % VariableGroup ( GI % nVariableGroups ) % Initialize ( VG )
 
   end subroutine AddVariableGroup
+
+
+  subroutine ClearVariableGroups ( GI )
+
+    class ( GridImageTemplate ), intent ( inout ), target :: &
+      GI
+    
+    if ( allocated ( GI % VariableGroup ) ) deallocate ( GI % VariableGroup )
+
+    allocate ( GI % VariableGroup ( GI % MAX_VARIABLE_GROUPS ) )
+
+    GI % nVariableGroups = 0
+
+  end subroutine ClearVariableGroups
 
 
 end module GridImage_Template

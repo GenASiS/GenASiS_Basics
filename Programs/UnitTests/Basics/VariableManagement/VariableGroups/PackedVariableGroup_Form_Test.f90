@@ -19,7 +19,7 @@ program PackedVariableGroup_Form_Test
       = [ 'Unit_1', 'Unit_2', 'Unit_3', 'Unit_4', 'Unit_5', 'Unit_6'  ]
   type ( MeasuredValueForm ), dimension ( 6 ) :: &
     VariableUnit
-  type ( ArrayInteger_1D_Form ), dimension ( 1 ) :: &
+  type ( Integer_1D_Form ), dimension ( 1 ) :: &
     VectorIndices
   type ( VariableGroupForm ), dimension ( 2 ) :: &
     VG
@@ -41,12 +41,12 @@ program PackedVariableGroup_Form_Test
 
   call VG ( 2 ) % Initialize &
          ( VG ( 1 ), NameOption = 'VariableGroup_2', &
-           SelectedOption = [ 2, 3, 6 ] )
+           iaSelectedOption = [ 2, 3, 6 ] )
   call PrintVariableGroup ( VG ( 2 ) )
 
   UnpackedIndex = [ 1, 3 ]
-  call PVG % Initialize ( VG ( 2 ), size ( UnpackedIndex ) )
-  call PVG % SetIndexArray ( UnpackedIndex )
+  call PVG % Initialize &
+         ( UnpackedIndex, VG ( 2 ) % nValues, VG ( 2 ) % nVariables )
   call PrintPackedVariableGroup ( PVG )
 
 contains
@@ -70,14 +70,14 @@ contains
     print *, 'VG % lName = ', VG % lName
     print *, 'VG % lVariable = ', VG % lVariable
     print *, 'VG % lVector = ', VG % lVector
-    print *, 'VG % Selected = ', VG % Selected
+    print *, 'VG % iaSelected = ', VG % iaSelected
     print *, 'VG % AllocatedValue = ', VG % AllocatedValue
     print *, 'VG % Name = ', trim ( VG % Name )
 
     do i = 1, VG % nVariables
       print *, &
         'VG % Variable (', i, ') = ', &
-        trim ( VG % Variable ( VG % Selected ( i ) ) )
+        trim ( VG % Variable ( VG % iaSelected ( i ) ) )
     end do
 
     do i = 1, VG % nVectors
@@ -88,7 +88,7 @@ contains
     do i = 1, VG % nVariables
       print *, &
         'VG % Unit (', i, ') % Unit = ', &
-        trim ( VG % Unit ( VG % Selected ( i ) ) % Unit )
+        trim ( VG % Unit ( VG % iaSelected ( i ) ) % Unit )
     end do
 
     do i = 1, VG % nVectors

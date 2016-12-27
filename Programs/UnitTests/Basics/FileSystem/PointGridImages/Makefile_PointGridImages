@@ -3,20 +3,21 @@ PATH_GENASIS = ../../../../../..
 include $(PATH_GENASIS)/Build/Makefile_Build
 
 all: \
-  PointGridImageSilo_Form_Test
+  PointGridImage_Form_Test
 
-PointGridImageSilo_Form_Test: PointGridImageSilo_Form_Test.o
-	$(LINK) $(FLAGS) -o PointGridImageSilo_Form_Test_$(MACHINE) \
-	  $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
-          $(FILE_SYSTEM_BASICS) $(GRID_IMAGE_BASICS) \
-          PointGridImageSilo_Form.o \
-          PointGridImageSilo_Form_Test.o $(LIBRARIES)
+PointGridImage_Form_Test: VariableManagement.a Display.a \
+  MessagePassing.a FileSystemBasics.a GridImageBasics.a \
+  PointGridImage_Form_Test.o
+	$(LINK) $(FLAGS) -o PointGridImage_Form_Test_$(MACHINE) \
+          PointGridImage_Form_Test.o PointGridImage_Form.o \
+          GridImageBasics.a FileSystemBasics.a MessagePassing.a Display.a \
+          VariableManagement.a $(LIBRARIES)
 
 clean:
-	rm -f *.o *.mod *.ld
+	rm -f *.o *.a *.mod *.ld
 
 clobber: clean
-	rm -f PointGridImageSilo_Form_Test_*
+	rm -f PointGridImage_Form_Test_*
 
 include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
 include $(PATH_DISPLAY)/Makefile_Dependencies
@@ -25,10 +26,10 @@ include $(PATH_FILE_SYSTEM_BASICS)/Makefile_Dependencies
 include $(PATH_GRID_IMAGE_BASICS)/Makefile_Dependencies
 include $(PATH_POINT_GRID_IMAGES)/Makefile_Dependencies
 
-PointGridImageSilo_Form_Test.o: \
+PointGridImage_Form_Test.o: \
   VariableManagement.o \
   Display.o \
   MessagePassing.o \
-  GridImageBasicsSilo.o \
-  PointGridImageSilo_Form.o \
-  PointGridImageSilo_Form_Test.f90
+  GridImageBasics.o \
+  PointGridImage_Form.o \
+  PointGridImage_Form_Test.f90

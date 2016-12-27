@@ -1,7 +1,7 @@
 FILE_SYSTEM_BASICS = \
-  DelayFileAccess_Command.o \
-  ReadLabelValue_Command.o \
-  FindParameter_Command.o \
-  ParametersStream_Form.o \
+  FileSystemBasics.o \
   TableStream_Form.o \
-  FileSystemBasics.o 
+  ParameterStream_Form.o \
+  FindParameter_Command.o \
+  ReadLabelValue_Command.o \
+  DelayFileAccess_Command.o

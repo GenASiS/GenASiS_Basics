@@ -29,8 +29,7 @@ module TableStream_Form
     procedure, public, pass :: &
       Read
     final :: &
-      Finalize, &
-      Finalize_1D
+      Finalize
   end type TableStreamForm
      
     private :: &
@@ -95,14 +94,14 @@ contains
   end subroutine Initialize
   
   
-  subroutine PrepareRead ( TS, nRowsSkipOption, nRowsOption, nColumnsOption )
+  subroutine PrepareRead ( TS, nRowsOption, nColumnsOption, oRowOption )
     
     class ( TableStreamForm ), intent ( inout ) :: &
       TS
     integer ( KDI ), intent ( in ), optional :: &
-      nRowsSkipOption, &
       nRowsOption, &
-      nColumnsOption
+      nColumnsOption, &
+      oRowOption
     
     call Show ( 'Reading table file', CONSOLE % INFO_5 )
     call Show ( &
@@ -112,13 +111,13 @@ contains
     if ( present ( nRowsOption ) ) then
       TS % nRows = nRowsOption
     else
-      call GetNumberOfRows ( TS, nRowsSkipOption )
+      call GetNumberOfRows ( TS, oRowOption )
     end if
     
     if ( present ( nColumnsOption ) )then
       TS % nColumns = nColumnsOption
     else
-      call GetNumberOfColumns ( TS, nRowsSkipOption )
+      call GetNumberOfColumns ( TS, oRowOption )
     end if
     
     call Show ( TS % nRows, 'nRows', CONSOLE % INFO_2 )
@@ -127,7 +126,7 @@ contains
   end subroutine PrepareRead 
   
   
-  subroutine Read ( TS, Value, nRowsSkipOption, nRowsOption, nColumnsOption, &
+  subroutine Read ( TS, Value, nRowsOption, nColumnsOption, oRowOption, &
                     SuccessOption )
   
     class ( TableStreamForm ), intent ( inout ) :: &
@@ -135,9 +134,9 @@ contains
     real ( KDR ), dimension ( :, : ), allocatable, intent ( out ) :: &
       Value
     integer ( KDI ), intent ( in ), optional :: &
-      nRowsSkipOption, &
       nRowsOption, &
-      nColumnsOption
+      nColumnsOption, &
+      oRowOption
     logical ( KDL ), intent ( out ), optional :: &
       SuccessOption
     
@@ -154,7 +153,7 @@ contains
       return
     end if
     
-    call TS % PrepareRead ( nRowsSkipOption, nRowsOption, nColumnsOption )
+    call TS % PrepareRead ( nRowsOption, nColumnsOption, oRowOption )
 
     allocate ( Value ( TS % nRows, TS % nColumns ) )
     
@@ -162,8 +161,8 @@ contains
     
     rewind TS % Handle
 
-    if ( present ( nRowsSkipOption ) ) then
-      do iRow = 1, nRowsSkipOption
+    if ( present ( oRowOption ) ) then
+      do iRow = 1, oRowOption
       read &
         ( unit = TS % Handle, fmt = FORMAT_BUFFER, iostat = Status ) Buffer
       end do
@@ -188,9 +187,7 @@ contains
   end subroutine Read
   
   
-  !-- FIXME: impure elemental is not yet implemented by current Intel compiler
-  ! impure elemental subroutine Finalize ( TS )
-  subroutine Finalize ( TS )
+  impure elemental subroutine Finalize ( TS )
   
     type ( TableStreamForm ), intent ( inout ) :: &
       TS
@@ -209,27 +206,12 @@ contains
   end subroutine Finalize 
   
   
-  subroutine Finalize_1D ( TS )
-  
-    type ( TableStreamForm ), dimension ( : ), intent ( inout ) :: &
-      TS
-    
-    integer ( KDI ) :: &
-      iTS
-      
-    do iTS = 1, size ( TS )
-      call Finalize ( TS ( iTS ) )
-    end do
-  
-  end subroutine Finalize_1D
-  
-  
-  subroutine GetNumberOfRows ( TS, nRowsSkipOption )
+  subroutine GetNumberOfRows ( TS, oRowOption )
   
     type ( TableStreamForm ), intent ( inout ) :: &
       TS
     integer ( KDI ), intent ( in ), optional :: &
-      nRowsSkipOption
+      oRowOption
 
     integer ( KDI ) :: &
       iRow, &
@@ -241,8 +223,8 @@ contains
     
     rewind TS % Handle
 
-    if ( present ( nRowsSkipOption ) ) then
-      do iRow = 1, nRowsSkipOption
+    if ( present ( oRowOption ) ) then
+      do iRow = 1, oRowOption
       read &
         ( unit = TS % Handle, fmt = FORMAT_BUFFER, iostat = Status ) Buffer
       end do
@@ -258,12 +240,12 @@ contains
   end subroutine GetNumberOfRows
   
   
-  subroutine GetNumberOfColumns ( TS, nRowsSkipOption )
+  subroutine GetNumberOfColumns ( TS, oRowOption )
   
     type ( TableStreamForm ), intent ( inout ) :: &
       TS
     integer ( KDI ), intent ( in ), optional :: &
-      nRowsSkipOption
+      oRowOption
     
     integer ( KDI ) :: &
       iRow, &
@@ -279,8 +261,8 @@ contains
     
     rewind TS % Handle
 
-    if ( present ( nRowsSkipOption ) ) then
-      do iRow = 1, nRowsSkipOption
+    if ( present ( oRowOption ) ) then
+      do iRow = 1, oRowOption
       read &
         ( unit = TS % Handle, fmt = FORMAT_BUFFER, iostat = Status ) Buffer
       end do

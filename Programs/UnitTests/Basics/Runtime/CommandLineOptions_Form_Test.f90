@@ -32,7 +32,7 @@ program CommandLineOptions_Form_Test
   !     OptionString=helloworld
 
   allocate ( C )
-  call C % Initialize ( WorldOption = .true. )
+  call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
     
   call UNIT % Initialize ( )

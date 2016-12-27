@@ -4,10 +4,10 @@ program CollectiveOperation_Form_Test
   use Display
   use MessagePassingBasics
   use REDUCTION_Singleton
-  use CollectiveOperationInteger_Form
-  use CollectiveOperationBigInteger_Form
-  use CollectiveOperationReal_Form
-  use CollectiveOperationComplex_Form
+  use CollectiveOperation_I__Form
+  use CollectiveOperation_BI__Form
+  use CollectiveOperation_R__Form
+  use CollectiveOperation_C__Form
 
   implicit none
 
@@ -18,13 +18,13 @@ program CollectiveOperation_Form_Test
     ComplexValue
   type ( CommunicatorForm ), allocatable :: &
     C
-  type ( CollectiveOperationIntegerForm ), allocatable :: &
+  type ( CollectiveOperation_I_Form ), allocatable :: &
     CO_I
-  type ( CollectiveOperationBigIntegerForm ), allocatable :: &
+  type ( CollectiveOperation_BI_Form ), allocatable :: &
     CO_BI
-  type ( CollectiveOperationRealForm ), allocatable :: &
+  type ( CollectiveOperation_R_Form ), allocatable :: &
     CO_R
-  type ( CollectiveOperationComplexForm ), allocatable :: &
+  type ( CollectiveOperation_C_Form ), allocatable :: &
     CO_C
 
   allocate ( C )

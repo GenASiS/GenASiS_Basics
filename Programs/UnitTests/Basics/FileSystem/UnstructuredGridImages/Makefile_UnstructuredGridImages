@@ -3,20 +3,21 @@ PATH_GENASIS = ../../../../../..
 include $(PATH_GENASIS)/Build/Makefile_Build
 
 all: \
-  UnstructuredGridImageSilo_Form_Test
+  UnstructuredGridImage_Form_Test
 
-UnstructuredGridImageSilo_Form_Test: UnstructuredGridImageSilo_Form_Test.o
-	$(LINK) $(FLAGS) -o UnstructuredGridImageSilo_Form_Test_$(MACHINE) \
-	  $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING) \
-          DelayFileAccess_Command.o GridImageStreamSilo_Form.o \
-          GridImageSilo_Template.o UnstructuredGridImageSilo_Form.o \
-          UnstructuredGridImageSilo_Form_Test.o $(LIBRARIES)
+UnstructuredGridImage_Form_Test: VariableManagement.a Display.a \
+  MessagePassing.a FileSystemBasics.a GridImageBasics.a \
+  UnstructuredGridImage_Form_Test.o
+	$(LINK) $(FLAGS) -o UnstructuredGridImage_Form_Test_$(MACHINE) \
+          UnstructuredGridImage_Form_Test.o UnstructuredGridImage_Form.o \
+          GridImageBasics.a FileSystemBasics.a MessagePassing.a Display.a \
+          VariableManagement.a $(LIBRARIES)
 
 clean:
-	rm -f *.o *.mod *.ld
+	rm -f *.o *.a *.mod *.ld
 
 clobber: clean
-	rm -f UnstructuredGridImageSilo_Form_Test_*
+	rm -f UnstructuredGridImage_Form_Test_*
 
 include $(PATH_VARIABLE_MANAGEMENT)/Makefile_Dependencies
 include $(PATH_DISPLAY)/Makefile_Dependencies
@@ -25,10 +26,10 @@ include $(PATH_FILE_SYSTEM_BASICS)/Makefile_Dependencies
 include $(PATH_GRID_IMAGE_BASICS)/Makefile_Dependencies
 include $(PATH_UNSTRUCTURED_GRID_IMAGES)/Makefile_Dependencies
 
-UnstructuredGridImageSilo_Form_Test.o: \
+UnstructuredGridImage_Form_Test.o: \
   VariableManagement.o \
   Display.o \
   MessagePassing.o \
   GridImageBasics.o \
-  UnstructuredGridImageSilo_Form.o \
-  UnstructuredGridImageSilo_Form_Test.f90
+  UnstructuredGridImage_Form.o \
+  UnstructuredGridImage_Form_Test.f90

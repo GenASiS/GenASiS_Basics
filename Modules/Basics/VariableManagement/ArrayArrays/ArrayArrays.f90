@@ -1,12 +1,12 @@
 module ArrayArrays
 
-  use ArrayInteger_1D__Form
-  use ArrayInteger_2D__Form
-  use ArrayInteger_3D__Form
-  use ArrayReal_1D__Form
-  use ArrayReal_2D__Form
-  use ArrayReal_3D__Form
-  use ArrayComplex_3D__Form
-  use ArrayCharacter_1D__Form
+  use Integer_1D__Form
+  use Integer_2D__Form
+  use Integer_3D__Form
+  use Real_1D__Form
+  use Real_2D__Form
+  use Real_3D__Form
+  use Complex_3D__Form
+  use Character_1D__Form
 
 end module ArrayArrays

@@ -7,7 +7,6 @@ module GetMemoryUsage_Command
   use VariableManagement
   use Display
   use MessagePassing
-  use FileSystem
 
   implicit none
   private
@@ -27,15 +26,15 @@ contains
 
 
   subroutine GetMemoryUsage &
-               ( C, HWM, RSS, Max_HWM_Option, Min_HWM_Option, &
+               ( HWM, RSS, C_Option, Max_HWM_Option, Min_HWM_Option, &
                  Mean_HWM_Option, Max_RSS_Option, Min_RSS_Option, &
                  Mean_RSS_Option )
     
-    type ( CommunicatorForm ), intent ( in ) :: &
-      C 
     type ( MeasuredValueForm ), intent ( out ) :: &
       HWM, &
       RSS
+    type ( CommunicatorForm ), intent ( in ), optional :: &
+      C_Option 
     type ( MeasuredValueForm ), intent ( out ), optional :: &
       Max_HWM_Option, &
       Min_HWM_Option, &
@@ -52,26 +51,24 @@ contains
       MemoryInfoFileExists
     character ( LDB ) :: &
       Buffer
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
 
-    call HWM % Initialize ( 'kilobyte', 0.0_KDR )
-    call RSS % Initialize ( 'kilobyte', 0.0_KDR )
+    call HWM % Initialize ( 'kB', 0.0_KDR )
+    call RSS % Initialize ( 'kB', 0.0_KDR )
     if ( present ( Max_HWM_Option ) ) &
-      call Max_HWM_Option % Initialize ( 'kilobyte', 0.0_KDR )    
+      call Max_HWM_Option % Initialize ( 'kB', 0.0_KDR )    
     if ( present ( Min_HWM_Option ) ) &
-      call Min_HWM_Option % Initialize ( 'kilobyte', 0.0_KDR )
+      call Min_HWM_Option % Initialize ( 'kB', 0.0_KDR )
     if ( present ( Mean_HWM_Option ) ) &
-      call Mean_HWM_Option % Initialize ( 'kilobyte', 0.0_KDR )    
+      call Mean_HWM_Option % Initialize ( 'kB', 0.0_KDR )    
     if ( present ( Max_RSS_Option ) ) &
-      call Max_RSS_Option % Initialize ( 'kilobyte', 0.0_KDR )
+      call Max_RSS_Option % Initialize ( 'kB', 0.0_KDR )
     if ( present ( Min_RSS_Option ) ) &
-      call Min_RSS_Option % Initialize ( 'kilobyte', 0.0_KDR )    
+      call Min_RSS_Option % Initialize ( 'kB', 0.0_KDR )    
     if ( present ( Mean_RSS_Option ) ) &
-      call Mean_RSS_Option % Initialize ( 'kilobyte', 0.0_KDR )
+      call Mean_RSS_Option % Initialize ( 'kB', 0.0_KDR )
     
-    call DelayFileAccess ( C % Rank )
-
     inquire ( file = MEMORY_INFO_FILE, exist = MemoryInfoFileExists )
     if ( .not. MemoryInfoFileExists ) then
       call Show &
@@ -100,12 +97,13 @@ contains
     
     !-- across processes value :
     
-    if ( present ( Max_HWM_Option ) .or. present ( Min_HWM_Option ) &
+    if ( present ( C_Option ) &
+         .and. ( present ( Max_HWM_Option ) .or. present ( Min_HWM_Option ) &
          .or. present ( Mean_HWM_Option ) .or. present ( Max_RSS_Option ) &
-         .or. present ( Min_RSS_Option ) .or. present (  Mean_RSS_Option ) ) &
+         .or. present ( Min_RSS_Option ) .or. present (  Mean_RSS_Option ) ) ) &
     then
       call CO % Initialize &
-             ( C, nOutgoing = [ 1 ], nIncoming = [ 1 ], &
+             ( C_Option, nOutgoing = [ 1 ], nIncoming = [ 1 ], &
                RootOption = CONSOLE % DisplayRank )
     end if
       
@@ -123,11 +121,11 @@ contains
       Min_HWM_Option % Number = Incoming ( 1 )
     end if
     
-    if ( present ( Mean_HWM_Option ) ) then
+    if ( present ( Mean_HWM_Option ) .and. present ( C_Option ) ) then
       CO % Outgoing % Value = [ HWM % Number ]
       call CO % Reduce ( REDUCTION % SUM )
       Incoming => CO % Incoming % Value
-      Mean_HWM_Option % Number = Incoming ( 1 ) / C % Size
+      Mean_HWM_Option % Number = Incoming ( 1 ) / C_Option % Size
     end if
     
     if ( present ( Max_RSS_Option ) ) then
@@ -144,11 +142,11 @@ contains
       Min_RSS_Option % Number = Incoming ( 1 )
     end if
     
-    if ( present ( Mean_RSS_Option ) ) then
+    if ( present ( Mean_RSS_Option ) .and. present ( C_Option ) ) then
       CO % Outgoing % Value = [ RSS % Number ]
       call CO % Reduce ( REDUCTION % SUM )
       Incoming => CO % Incoming % Value
-      Mean_RSS_Option % Number = Incoming ( 1 ) / C % Size
+      Mean_RSS_Option % Number = Incoming ( 1 ) / C_Option % Size
     end if
 
     nullify ( Incoming )

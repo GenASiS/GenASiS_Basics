@@ -11,7 +11,7 @@ module UnstructuredGridImage_Form
   implicit none
   private
 
-  include 'silo.inc'
+  include 'silo_f9x.inc'
 
   type, public, extends ( GridImageSiloTemplate ) &
     :: UnstructuredGridImageForm
@@ -37,6 +37,8 @@ module UnstructuredGridImage_Form
       ReadMesh
     procedure, private, pass :: &
       ReadVariableGroup 
+    procedure, public, pass :: &
+      ClearGrid
     final :: &
       Finalize
   end type UnstructuredGridImageForm
@@ -222,14 +224,10 @@ contains
   end subroutine Read 
   
   
-  elemental subroutine Finalize ( UGI )
+  subroutine ClearGrid ( UGI )
 
-    type ( UnstructuredGridImageForm ), intent ( inout ) :: &
+    class ( UnstructuredGridImageForm ), intent ( inout ) :: &
       UGI
-
-    nullify ( UGI % Stream )
-
-    if ( allocated ( UGI % VariableGroup ) ) deallocate ( UGI % VariableGroup )
 
     if ( allocated ( UGI % NodeCoordinate_3 ) ) &
       deallocate ( UGI % NodeCoordinate_3 )
@@ -239,6 +237,20 @@ contains
       deallocate ( UGI % NodeCoordinate_1 )
 
     if ( allocated ( UGI % NodeList ) ) deallocate ( UGI % NodeList )
+
+  end subroutine ClearGrid
+
+
+  impure elemental subroutine Finalize ( UGI )
+
+    type ( UnstructuredGridImageForm ), intent ( inout ) :: &
+      UGI
+
+    nullify ( UGI % Stream )
+
+    if ( allocated ( UGI % VariableGroup ) ) deallocate ( UGI % VariableGroup )
+
+    call UGI % ClearGrid ( )
 
   end subroutine Finalize
   
@@ -393,7 +405,7 @@ contains
     
       do iS = 1, VG % nVariables
       
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
       
         call Show ( 'Writing a Variable (unstructured)', CONSOLE % INFO_6 )
         call Show ( iS, 'iSelected', CONSOLE % INFO_6 )
@@ -557,11 +569,22 @@ contains
     if ( UGI % nDimensions == 3 ) &
       call c_f_pointer ( DB_UM % NodeCoordinate ( 3 ), NC_3, [ UGI % nNodes ] )
     
+    if ( allocated ( UGI % NodeCoordinate_1 ) ) &
+      deallocate ( UGI % NodeCoordinate_1 ) 
+    if ( allocated ( UGI % NodeCoordinate_2 ) ) &
+      deallocate ( UGI % NodeCoordinate_2 ) 
+    if ( allocated ( UGI % NodeCoordinate_3 ) ) &
+      deallocate ( UGI % NodeCoordinate_3 )
+
+    allocate ( UGI % NodeCoordinate_1 ( size ( NC_1 ) ) )
+    allocate ( UGI % NodeCoordinate_2 ( size ( NC_2 ) ) )
     UGI % NodeCoordinate_1 = NC_1
     UGI % NodeCoordinate_2 = NC_2
-    if ( UGI % nDimensions == 3 ) &
+    if ( UGI % nDimensions == 3 ) then
+      allocate ( UGI % NodeCoordinate_3 ( size ( NC_3 ) ) )
       UGI % NodeCoordinate_3 = NC_3
-    
+    end if
+      
     call DB_FreeUnstructuredMesh ( DB_UM_Handle )
     
     DB_UM_Handle = c_null_ptr
@@ -620,7 +643,7 @@ contains
     
       do iS = 1, VG % nVariables
       
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
         VariableName = trim ( VG % Variable ( iVrbl ) ) // c_null_char
 
         DB_UV_Handle = DB_GetUnstructuredVariable ( DB_File, VariableName )

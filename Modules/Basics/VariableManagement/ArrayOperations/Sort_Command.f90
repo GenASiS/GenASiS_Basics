@@ -74,9 +74,38 @@ contains
       Swap, &
       Pivot
       
-    include 'Sort_Generic.inc'
+    Pivot = A ( 1 ) 
+    iLow  = 0
+    iHigh = size ( A ) + 1
+    
+    do
+
+      iHigh = iHigh - 1
+      do while ( A ( iHigh ) > Pivot ) 
+        iHigh = iHigh - 1
+      end do
+
+      iLow = iLow + 1
+      do while ( A ( iLow ) < Pivot ) 
+        iLow = iLow + 1
+      end do
+
+      if ( iLow < iHigh ) then
+        Swap        = A ( iLow ) 
+        A ( iLow )  = A ( iHigh ) 
+        A ( iHigh ) = Swap
+      else if ( iLow == iHigh ) then
+        iPartition = iLow + 1
+        return
+      else
+        iPartition = iLow
+        return
+      end if
+
+    end do
       
   end subroutine PartitionIndex_I
+  
   
   pure subroutine PartitionIndex_R ( A, iPartition )
     
@@ -91,7 +120,36 @@ contains
       Swap, &
       Pivot
       
-    include 'Sort_Generic.inc'
+    Pivot = A ( 1 ) 
+    iLow  = 0
+    iHigh = size ( A ) + 1
+    
+    do
+
+      iHigh = iHigh - 1
+      do while ( A ( iHigh ) > Pivot ) 
+        iHigh = iHigh - 1
+      end do
+
+      iLow = iLow + 1
+      do while ( A ( iLow ) < Pivot ) 
+        iLow = iLow + 1
+      end do
+
+      if ( iLow < iHigh ) then
+        Swap        = A ( iLow ) 
+        A ( iLow )  = A ( iHigh ) 
+        A ( iHigh ) = Swap
+      else if ( iLow == iHigh ) then
+        iPartition = iLow + 1
+        return
+      else
+        iPartition = iLow
+        return
+      end if
+
+    end do
+
       
   end subroutine PartitionIndex_R
   

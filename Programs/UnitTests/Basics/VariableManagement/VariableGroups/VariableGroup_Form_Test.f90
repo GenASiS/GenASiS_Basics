@@ -16,7 +16,7 @@ program VariableGroup_Form_Test
       = [ 'Unit_1', 'Unit_2', 'Unit_3', 'Unit_4', 'Unit_5', 'Unit_6'  ]
   type ( MeasuredValueForm ), dimension ( 6 ) :: &
     VariableUnit
-  type ( ArrayInteger_1D_Form ), dimension ( 1 ) :: &
+  type ( Integer_1D_Form ), dimension ( 1 ) :: &
     VectorIndices
   type ( VariableGroupForm ), dimension ( 3 ) :: &
     VG
@@ -42,7 +42,7 @@ program VariableGroup_Form_Test
   !-- InitializeClone, take 2
   call VG ( 3 ) % Initialize &
          ( VG ( 1 ), NameOption = 'VariableGroup_3', &
-           SelectedOption = [ 2, 3, 6 ] )
+           iaSelectedOption = [ 2, 3, 6 ] )
   call PrintVariableGroup ( VG ( 3 ) )
   
 contains
@@ -65,14 +65,14 @@ contains
     print *, 'VG % lName = ', VG % lName
     print *, 'VG % lVariable = ', VG % lVariable
     print *, 'VG % lVector = ', VG % lVector
-    print *, 'VG % Selected = ', VG % Selected
+    print *, 'VG % iaSelected = ', VG % iaSelected
     print *, 'VG % AllocatedValue = ', VG % AllocatedValue
     print *, 'VG % Name = ', trim ( VG % Name )
 
     do i = 1, VG % nVariables
       print *, &
         'VG % Variable (', i, ') = ', &
-        trim ( VG % Variable ( VG % Selected ( i ) ) )
+        trim ( VG % Variable ( VG % iaSelected ( i ) ) )
     end do
 
     do i = 1, VG % nVectors
@@ -83,7 +83,7 @@ contains
     do i = 1, VG % nVariables
       print *, &
         'VG % Unit (', i, ') % Unit = ', &
-        trim ( VG % Unit ( VG % Selected ( i ) ) % Unit )
+        trim ( VG % Unit ( VG % iaSelected ( i ) ) % Unit )
     end do
 
     do i = 1, VG % nVectors

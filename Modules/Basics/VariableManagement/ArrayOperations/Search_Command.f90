@@ -41,16 +41,55 @@ contains
     select type ( A )
     
     type is ( integer ( KDI ) )
+      
       select type ( Value )
       type is ( integer ( KDI ) )
-        include 'Search_Generic.inc'
+        nValues = size ( A ) 
+        Ascending = ( A ( nValues )  >= A ( 1 )  ) 
+        iLow = 0
+        iHigh = nValues + 1
+        do while ( iHigh - iLow > 1 ) 
+          iMiddle =  ( iHigh + iLow )  / 2
+          if ( Ascending .and. ( Value >= A ( iMiddle )  )  ) then
+            iLow = iMiddle
+          else
+            iHigh = iMiddle
+          end if
+        end do
+        if ( Value == A ( 1 ) ) then
+          iValue = 1
+        else if ( Value == A ( nValues ) ) then
+          iValue = nValues  !-- modification from Numerical Recipes
+        else
+          iValue = iLow
+        end if
       end select
     
     type is ( real ( KDR ) )
+      
       select type ( Value )
       type is ( real ( KDR ) )
-        include 'Search_Generic.inc'
+        nValues = size ( A ) 
+        Ascending = ( A ( nValues )  >= A ( 1 )  ) 
+        iLow = 0
+        iHigh = nValues + 1
+        do while ( iHigh - iLow > 1 ) 
+          iMiddle =  ( iHigh + iLow )  / 2
+          if ( Ascending .and. ( Value >= A ( iMiddle )  )  ) then
+            iLow = iMiddle
+          else
+            iHigh = iMiddle
+          end if
+        end do
+        if ( Value == A ( 1 ) ) then
+          iValue = 1
+        else if ( Value == A ( nValues ) ) then
+          iValue = nValues  !-- modification from Numerical Recipes
+        else
+          iValue = iLow
+        end if
       end select
+    
     end select
     
   end subroutine Search

@@ -78,10 +78,10 @@ contains
       ClearOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
 
-    type ( ArrayInteger_1D_Form ), dimension ( : ), allocatable :: &
+    type ( Integer_1D_Form ), dimension ( : ), allocatable :: &
       VectorIndices
     type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
       VariableUnit
@@ -365,7 +365,7 @@ contains
 
     integer ( KDI ) :: &
       iD  !-- iDimension
-    type ( ArrayInteger_1D_Form ), dimension ( 1 ) :: &
+    type ( Integer_1D_Form ), dimension ( 1 ) :: &
       VectorIndices
     type ( MeasuredValueForm ) :: &
       DensityUnit
@@ -398,7 +398,7 @@ contains
     call VectorIndices ( 1 ) % Initialize ( PF % VELOCITY )
 
     call PF % Output ( 1 ) % Initialize &
-           ( PF, SelectedOption = [ PF % COMOVING_DENSITY, PF % VELOCITY ], &
+           ( PF, iaSelectedOption = [ PF % COMOVING_DENSITY, PF % VELOCITY ], &
              VectorOption = [ 'Velocity                       ' ], &
              VectorIndicesOption = VectorIndices )
 
@@ -437,9 +437,9 @@ contains
         VariableUnit
     !-- FIXME: intent(out) here caused ICE with Intel Compiler 15
     !          Temporarily set to intent(inout)
-    !type ( ArrayInteger_1D_Form ), dimension ( : ), allocatable, &
+    !type ( Integer_1D_Form ), dimension ( : ), allocatable, &
     !  intent ( out ) :: &
-    type ( ArrayInteger_1D_Form ), dimension ( : ), allocatable, &
+    type ( Integer_1D_Form ), dimension ( : ), allocatable, &
       intent ( inout ) :: &
         VectorIndices
     character ( * ), dimension ( : ), intent ( in ), optional :: &
@@ -449,7 +449,7 @@ contains
       NameOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       VariableUnitOption
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional :: &
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional :: &
       VectorIndicesOption
 
     integer ( KDI ) :: &

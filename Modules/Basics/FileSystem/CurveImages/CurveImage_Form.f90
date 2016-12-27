@@ -12,7 +12,7 @@ module CurveImage_Form
   implicit none 
   private 
   
-  include 'silo.inc'
+  include 'silo_f9x.inc'
   
   type, public, extends ( GridImageSiloTemplate ) :: CurveImageForm
   contains
@@ -28,6 +28,8 @@ module CurveImage_Form
       Write
     procedure, public, pass :: &
       Read
+    procedure, public, pass :: &
+      ClearGrid
     final :: &
       Finalize
   end type CurveImageForm
@@ -43,7 +45,7 @@ contains
       CI
     character ( * ), intent ( in ) :: &
       Directory
-    type ( ArrayReal_1D_Form ), intent ( in ) :: &
+    type ( Real_1D_Form ), intent ( in ) :: &
       Edge
     integer ( KDI ), intent ( in ) :: &
       nProperCells, &
@@ -52,7 +54,7 @@ contains
       CoordinateLabelOption
     type ( MeasuredValueForm ), intent ( in ), optional :: &
       CoordinateUnitOption
-    
+
     CI % oValue       = oValue
     CI % nTotalCells  = nProperCells
     CI % nGhostCells  = 0
@@ -64,14 +66,19 @@ contains
       allocate ( CI % NodeCoordinate_1 ( nProperCells ) )
       CI % NodeCoordinate_1 = Edge % Value
     else
+      associate &
+        ( nP => nProperCells, &
+          oV => oValue )
       allocate ( CI % NodeCoordinate_1 ( nProperCells ) )
       CI % NodeCoordinate_1 &
-        = ( Edge % Value ( 2 : nProperCells + 1 ) &
-              - Edge % Value ( 1 : nProperCells ) ) * 0.5_KDR &
-          + Edge % Value ( 1 : nProperCells )
+        = Edge % Value ( oV + 1 : oV + nP ) &
+          + ( Edge % Value ( oV + 2 : oV + nP + 1 ) &
+              - Edge % Value ( oV + 1 : oV + nP ) ) &
+            * 0.5_KDR
+      end associate !-- nP, etc.
     end if
     
-    CI % Directory      = Directory
+    CI % Directory = Directory
     
     if ( present ( CoordinateUnitOption ) ) &
       CI % CoordinateUnit ( 1 ) = CoordinateUnitOption
@@ -119,7 +126,7 @@ contains
           + NodeCoordinate ( 1 : nProperCells )
     end if
     
-    CI % Directory      = Directory
+    CI % Directory = Directory
     
     if ( present ( CoordinateUnitOption ) ) &
       CI % CoordinateUnit ( 1 ) = CoordinateUnitOption
@@ -168,7 +175,7 @@ contains
       SiloOptionList
     character ( LDF ) :: &
       WorkingDirectory
-    type ( CollectiveOperationRealForm ), target :: &
+    type ( CollectiveOperation_R_Form ), target :: &
       CO_Coordinate, &
       CO_Variable
 
@@ -179,7 +186,7 @@ contains
       call GI % Stream % MakeDirectory ( GI % Directory )
       
     SiloOptionList = DB_F77NULL
-      
+
     call GI % WriteHeader ( TimeOption, CycleNumberOption )
     
     if ( GI % Stream % Parallel ) then
@@ -208,12 +215,13 @@ contains
         
           do iS = 1, VG % nVariables
 
-            iVrbl = VG % Selected ( iS ) 
+            iVrbl = VG % iaSelected ( iS ) 
             
             nSiloOptions &
-              = count ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
-                          len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
-                          len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
+              = count &
+                  ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
+                      len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
+                      len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
             
             Error = DBMKOPTLIST ( nSiloOptions, SiloOptionList )
             
@@ -287,7 +295,7 @@ contains
         
       end do
 
-    else
+    else !-- .not. Parallel
     
       do iG = 1, GI % nVariableGroups
         
@@ -297,12 +305,13 @@ contains
         
           do iS = 1 , VG % nVariables
 
-            iVrbl = VG % Selected ( iS )
+            iVrbl = VG % iaSelected ( iS )
             
             nSiloOptions &
-              = count ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
-                          len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
-                          len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
+              = count &
+                  ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
+                      len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
+                      len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
             
             Error = DBMKOPTLIST ( nSiloOptions, SiloOptionList )
             
@@ -375,6 +384,7 @@ contains
       nTotalCells, &
       nVariables, &
       Error, &
+      DataType, &
       SiloOptionList
     real ( KDR ), dimension ( 1 ) :: &
       X_Scratch, &
@@ -421,7 +431,7 @@ contains
                     ( GI % Stream % MeshBlockHandle, &
                       trim ( VariableName ( 1 ) ), &
                       len_trim ( VariableName ( 1 ) ), 1, &
-                      X_Scratch, Y_Scratch, DB_DOUBLE, GI % nTotalCells )
+                      X_Scratch, Y_Scratch, DataType, GI % nTotalCells )
           
           if ( allocated ( GI % NodeCoordinate_1 ) ) &
             deallocate ( GI % NodeCoordinate_1 )
@@ -443,7 +453,7 @@ contains
                         VG % Value ( GI % oValue + 1 &
                                        : GI % oValue + GI % nTotalCells, &
                                      iVrbl ), &
-                        DB_DOUBLE, nTotalCells )
+                        DataType, nTotalCells )
             
             !-- FIXME: An assumption is made that the unit used to write
             !          and read are the same. A better way would be to read
@@ -473,8 +483,23 @@ contains
      
   end subroutine Read
      
-  
-  elemental subroutine Finalize ( CI )
+
+  subroutine ClearGrid ( CI )
+
+    class ( CurveImageForm ), intent ( inout ) :: &
+      CI
+
+    if ( allocated ( CI % NodeCoordinate_3 ) ) &
+      deallocate ( CI % NodeCoordinate_3 ) 
+    if ( allocated ( CI % NodeCoordinate_2 ) ) &
+      deallocate ( CI % NodeCoordinate_2 ) 
+    if ( allocated ( CI % NodeCoordinate_1 ) ) &
+      deallocate ( CI % NodeCoordinate_1 ) 
+    
+  end subroutine ClearGrid
+
+
+  impure elemental subroutine Finalize ( CI )
     
     type ( CurveImageForm ), intent ( inout ) :: &
       CI
@@ -484,13 +509,8 @@ contains
     if ( allocated ( CI % VariableGroup ) ) &
       deallocate ( CI % VariableGroup )
 
-    if ( allocated ( CI % NodeCoordinate_3 ) ) &
-      deallocate ( CI % NodeCoordinate_3 ) 
-    if ( allocated ( CI % NodeCoordinate_2 ) ) &
-      deallocate ( CI % NodeCoordinate_2 ) 
-    if ( allocated ( CI % NodeCoordinate_1 ) ) &
-      deallocate ( CI % NodeCoordinate_1 ) 
-    
+    call CI % ClearGrid ( )
+
   end subroutine Finalize
   
 end module CurveImage_Form

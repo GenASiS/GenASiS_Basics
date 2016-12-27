@@ -132,7 +132,7 @@ contains
       ClearOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
 
     type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
@@ -164,7 +164,7 @@ contains
       CF
 
     call CF % Output ( 1 ) % Initialize &
-           ( CF, SelectedOption = CF % iaPrimitive )
+           ( CF, iaSelectedOption = CF % iaPrimitive )
 
   end subroutine SetOutputTemplate
 

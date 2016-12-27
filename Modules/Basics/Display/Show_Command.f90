@@ -19,6 +19,8 @@ module Show_Command
     module procedure ShowBigInteger
     module procedure ShowBigInteger_1D
     module procedure ShowBigInteger_2D
+    module procedure ShowTinyInteger
+    module procedure ShowTinyInteger_1D
     module procedure ShowReal
     module procedure ShowReal_1D
     module procedure ShowReal_1D_Description
@@ -49,8 +51,9 @@ contains
 
 
   subroutine ShowInteger &
-               ( Integer, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -82,8 +85,9 @@ contains
 
 
   subroutine ShowInteger_1D &
-               ( Integer, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -125,8 +129,9 @@ contains
 
 
   subroutine ShowInteger_2D &
-               ( Integer, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -172,8 +177,9 @@ contains
 
 
   subroutine ShowBigInteger &
-               ( Integer, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -205,8 +211,9 @@ contains
 
 
   subroutine ShowBigInteger_1D &
-               ( Integer, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -248,8 +255,9 @@ contains
 
 
   subroutine ShowBigInteger_2D &
-               ( Integer, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -294,9 +302,87 @@ contains
   end subroutine ShowBigInteger_2D
 
 
+  subroutine ShowTinyInteger &
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
+
+    !-- Convention on argument order violated because the Integer being
+    !   "Show"n is more important than the Description.
+
+    integer ( KTI ), intent ( in ) :: &
+      Integer
+    character ( * ), intent ( in ) :: &
+      Description
+    integer ( KDI ), intent ( in ), optional :: &
+      IgnorabilityOption, &
+      DisplayRankOption, &
+      nLeadingLinesOption, &
+      nTrailingLinesOption
+
+    logical( KDL ) :: &
+      AbortShow
+    
+    call PrepareShow &
+           ( AbortShow, IgnorabilityOption, DisplayRankOption, &
+             nLeadingLinesOption )
+
+    if ( AbortShow ) return
+
+    print '(a35,a3,i10)', trim ( Description ), '  =', Integer
+
+    call EndShow ( nTrailingLinesOption )
+
+  end subroutine ShowTinyInteger
+
+
+  subroutine ShowTinyInteger_1D &
+               ( Integer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
+
+    !-- Convention on argument order violated because the Integer being
+    !   "Show"n is more important than the Description.
+
+    integer ( KTI ), dimension ( : ), intent ( in ) :: &
+      Integer
+    character ( * ), intent ( in ) :: &
+      Description
+    integer ( KDI ), intent ( in ), optional :: &
+      IgnorabilityOption, &
+      DisplayRankOption, &
+      nLeadingLinesOption, &
+      nTrailingLinesOption
+
+    integer ( KDI ) :: &
+      i
+    logical ( KDL ) :: &
+      AbortShow
+    character ( LDN ) :: &
+      IndexLabel
+    
+    call PrepareShow &
+           ( AbortShow, IgnorabilityOption, DisplayRankOption, &
+             nLeadingLinesOption )
+
+    if ( AbortShow ) return
+
+    print '(a35)', trim ( Description )
+    do i = 1, size ( Integer )
+      write ( IndexLabel, fmt = '( i7 )' ) i
+      print &
+        '(a38,i10)', &
+        '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', Integer ( i )
+    end do
+
+    call EndShow ( nTrailingLinesOption )
+
+  end subroutine ShowTinyInteger_1D
+
+
   subroutine ShowReal &
-               ( Real, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+               ( Real, Description, IgnorabilityOption, DisplayRankOption, &
+                 nLeadingLinesOption, nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Description.
@@ -507,7 +593,8 @@ contains
   
   subroutine ShowRealUnitized &
                ( Real, Unit, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.
@@ -538,7 +625,8 @@ contains
   
   subroutine ShowRealUnitized_1D &
                ( Real, Unit, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.
@@ -565,7 +653,8 @@ contains
     allocate ( MV ( size ( Real ) ) )
     
     do iV = 1, size ( Real )
-      call MV ( iV ) % Initialize ( Unit % Label, Real ( iV ) / Unit % Number )
+      call MV ( iV ) % Initialize &
+             ( Unit % Label, Real ( iV ) / Unit % Number )
     end do
     
     call Show &
@@ -577,7 +666,8 @@ contains
   
   subroutine ShowRealUnitized_1D_1D &
                ( Real, Unit, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.
@@ -612,8 +702,9 @@ contains
   
   
   subroutine ShowComplex_1D &
-               ( Complex, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Complex, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Complex being
     !   "Show"n is more important than the Description.
@@ -655,8 +746,9 @@ contains
   
   
   subroutine ShowComplex_2D &
-               ( Complex, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Complex, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Complex being
     !   "Show"n is more important than the Description.
@@ -702,8 +794,9 @@ contains
   
   
   subroutine ShowComplex_3D &
-               ( Complex, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Complex, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Complex being
     !   "Show"n is more important than the Description.
@@ -753,8 +846,9 @@ contains
   
   
   subroutine ShowLogical &
-               ( Logical, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Logical, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Logical being
     !   "Show"n is more important than the Description.
@@ -790,8 +884,9 @@ contains
   
   
   subroutine ShowLogical_1D &
-               ( Logical, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Logical, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Logical being
     !   "Show"n is more important than the Description.
@@ -840,7 +935,8 @@ contains
 
   subroutine ShowCharacter &
                ( Character, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     character ( * ), intent ( in ) :: &
       Character, &
@@ -920,8 +1016,9 @@ contains
   
   
   subroutine ShowCharacter_1D &
-               ( Character, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+               ( Character, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Character being
     !   "Show"n is more important than the Description.
@@ -1023,7 +1120,8 @@ contains
   
   subroutine ShowMeasuredValueConvertUnit &
                ( MV_Source, Unit, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.
@@ -1128,7 +1226,8 @@ contains
   
   subroutine ShowMeasuredValue_1D_ConvertUnit &
                ( MV_Source, Unit, Description, IgnorabilityOption, &
-                 DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.

@@ -1,4 +1,3 @@
-
 module ConservationLawEvolution_Template
 
   use Basics
@@ -108,13 +107,15 @@ contains
     class ( ConservationLawEvolutionTemplate ), intent ( inout ) :: &
       CLE
       
-    type ( MeasuredValueForm ) :: &
-      StartWallTime, &
-      FinishWallTime
-
+    integer ( KDI ) :: &
+      iTimerComputation
+      
+    call PROGRAM_HEADER % AddTimer ( 'Computational', iTimerComputation )
+    
     associate &
       ( DM  => CLE % DistributedMesh, &
-        CLS => CLE % ConservationLawStep )
+        CLS => CLE % ConservationLawStep, &
+        T => PROGRAM_HEADER % Timer ( iTimerComputation ) )
 
     call CLS % Initialize ( CLE % ConservedFields )    
 
@@ -128,7 +129,7 @@ contains
 
     call Show ( 'Evolving a Fluid', CONSOLE % INFO_2 )
     
-    StartWallTime = WallTime ( )
+    call T % Start ( ) 
 
     do while ( CLE % Time < CLE % FinishTime )
 
@@ -137,7 +138,8 @@ contains
       call ComputeTimeStep ( CLE )
       if ( CLE % Time + CLE % TimeStep > CLE % WriteTime ) &
         CLE % TimeStep = CLE % WriteTime - CLE % Time
-      call Show ( CLE % TimeStep, CLE % TimeUnit, 'TimeStep', CONSOLE % INFO_3 )
+      call Show ( CLE % TimeStep, CLE % TimeUnit, 'TimeStep', &
+                  CONSOLE % INFO_3 )
       
       call CLS % Solve ( CLE % TimeStep )
 
@@ -148,10 +150,7 @@ contains
 
       if ( CLE % Time >= CLE % WriteTime ) then
         
-        FinishWallTime = WallTime ( )
-        PROGRAM_HEADER % ComputationalWallTime &
-          = PROGRAM_HEADER % ComputationalWallTime &
-              + ( FinishWallTime - StartWallTime )
+        call T % Stop ( )
 
         call DM % Write &
                ( TimeOption = CLE % Time / CLE % TimeUnit, &
@@ -159,16 +158,13 @@ contains
         CLE % WriteTime &
           = min ( CLE % Time + CLE % WriteTimeInterval, CLE % FinishTime )
         
-        StartWallTime = WallTime ( )
+        call T % Start ( )
         
       end if
 
     end do
     
-    FinishWallTime = WallTime ( )
-    PROGRAM_HEADER % ComputationalWallTime &
-      = PROGRAM_HEADER % ComputationalWallTime &
-          + ( FinishWallTime - StartWallTime )
+    call T % Stop ( )
     
     end associate !-- DM, etc.
 
@@ -185,7 +181,7 @@ contains
       FEM_1, FEM_2, FEM_3
     real ( KDR ) :: &
       RampFactor
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
 
     associate &

@@ -66,13 +66,19 @@ contains
     real ( KDR ) :: &
       W
     
-    associate ( Pi => CONSTANT % PI )
+    real ( KDR ) :: &
+      X_Safe
 
-    W = PWA % Offset &
-        - 2.0_KDR * PWA % Amplitude / Pi &
-          * atan ( 1.0_KDR / tan ( Pi * max ( X, tiny ( 1.0_KDR ) ) ) )
+    X_Safe = sign ( max ( tiny ( 0.0_KDR ), abs ( X ) ), X )
+    
+    associate &
+      ( O => PWA % Offset, &
+        A => PWA % Amplitude, &
+        Pi => CONSTANT % PI )
 
-    end associate !-- Pi
+    W  =  O  -  2.0_KDR * A / Pi * atan ( 1.0_KDR / tan ( Pi * X_Safe ) )
+
+    end associate !-- O, etc.
 
   end function Waveform
 

@@ -19,9 +19,9 @@ module VariableGroup_Form
       nVectors   = 0, &
       lName      = 0
     integer ( KDI ), dimension ( : ), allocatable :: &
+      iaSelected, &
       lVariable, &
-      lVector, &
-      Selected
+      lVector
     real ( KDR ), dimension ( :, : ), pointer :: &
       Value => null (  )
     logical ( KDL ) :: &
@@ -33,7 +33,7 @@ module VariableGroup_Form
       Vector
     type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
       Unit
-    type ( ArrayInteger_1D_Form ), dimension ( : ), allocatable :: &
+    type ( Integer_1D_Form ), dimension ( : ), allocatable :: &
       VectorIndices
   contains
     !-- FIXME: Changed "private" to "public" since marking this private
@@ -50,7 +50,7 @@ module VariableGroup_Form
     final :: &
       Finalize
   end type VariableGroupForm
-  
+
     private :: &
       InitializeOptionalMembers
 
@@ -65,7 +65,7 @@ contains
       VG
     integer ( KDI ), dimension ( 2 ), intent ( in ) :: &
       ValueShape
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional :: &
       VectorIndicesOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
@@ -86,8 +86,8 @@ contains
     
     VG % nVariables = ValueShape ( 2 )
 
-    allocate ( VG % Selected ( VG % nVariables ) )
-    VG % Selected = [ ( iVrbl, iVrbl = 1, VG % nVariables ) ]
+    allocate ( VG % iaSelected ( VG % nVariables ) )
+    VG % iaSelected = [ ( iVrbl, iVrbl = 1, VG % nVariables ) ]
 
     allocate ( VG % Value ( VG % nValues, ValueShape ( 2 ) ) )
     VG % AllocatedValue = .true.
@@ -105,13 +105,13 @@ contains
   
   subroutine InitializeAssociate &
                ( VG, Value, VectorIndicesOption, UnitOption, VectorOption, &
-                 VariableOption, NameOption, SelectedOption )
+                 VariableOption, NameOption, iaSelectedOption )
     
     class ( VariableGroupForm ), intent ( inout ) :: &
       VG
     real ( KDR ), dimension ( :, : ), intent ( in ), target :: &
       Value
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
@@ -121,24 +121,24 @@ contains
     character ( * ), intent ( in ), optional :: &
       NameOption
     integer ( KDI ), dimension ( : ), intent ( in ), optional :: &
-      SelectedOption
+      iaSelectedOption
     
     integer ( KDI ) :: &
       iVrbl
 
     VG % nValues = size ( Value, dim = 1 )
     
-    if ( present ( SelectedOption ) ) then
-      VG % nVariables = size ( SelectedOption )
+    if ( present ( iaSelectedOption ) ) then
+      VG % nVariables = size ( iaSelectedOption )
     else
       VG % nVariables = size ( Value, dim = 2 )
     end if
     
-    allocate ( VG % Selected ( VG % nVariables ) )
-    if ( present ( SelectedOption ) ) then
-      VG % Selected = SelectedOption
+    allocate ( VG % iaSelected ( VG % nVariables ) )
+    if ( present ( iaSelectedOption ) ) then
+      VG % iaSelected = iaSelectedOption
     else
-      VG % Selected = [ ( iVrbl, iVrbl = 1, VG % nVariables ) ]
+      VG % iaSelected = [ ( iVrbl, iVrbl = 1, VG % nVariables ) ]
     end if
 
     VG % Value => Value
@@ -153,28 +153,28 @@ contains
   
   subroutine InitializeClone (  &
                VG_Target, VG_Source, VectorIndicesOption, VectorOption, &
-               NameOption, SelectedOption )
+               NameOption, iaSelectedOption )
 
     class ( VariableGroupForm ), intent ( inout ) :: &
       VG_Target
     class ( VariableGroupForm ), intent ( in ) :: &
       VG_Source
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
     character ( * ), dimension ( : ), intent ( in ), optional :: &
       VectorOption
     character ( * ), intent ( in ), optional :: &
       NameOption
     integer ( KDI ), dimension ( : ), intent ( in ), optional :: &
-      SelectedOption
+      iaSelectedOption
 
     integer ( KDI ) :: &
       iV     !-- iVector
 
     VG_Target % nValues = VG_Source % nValues
     
-    if ( present ( SelectedOption ) ) then
-      VG_Target % nVariables = size ( SelectedOption )
+    if ( present ( iaSelectedOption ) ) then
+      VG_Target % nVariables = size ( iaSelectedOption )
     else
       VG_Target % nVariables = VG_Source % nVariables
     end if
@@ -194,11 +194,11 @@ contains
       VG_Target % lVector = VG_Source % lVector 
     end if
 
-    allocate ( VG_Target % Selected ( VG_Target % nVariables ) )
-    if ( present ( SelectedOption ) ) then
-      VG_Target % Selected = SelectedOption
+    allocate ( VG_Target % iaSelected ( VG_Target % nVariables ) )
+    if ( present ( iaSelectedOption ) ) then
+      VG_Target % iaSelected = iaSelectedOption
     else
-      VG_Target % Selected = VG_Source % Selected
+      VG_Target % iaSelected = VG_Source % iaSelected
     end if
   
     VG_Target % Value => VG_Source % Value
@@ -237,7 +237,7 @@ contains
   end subroutine InitializeClone
 
 
-  elemental subroutine Finalize ( VG )
+  impure elemental subroutine Finalize ( VG )
 
     type ( VariableGroupForm ), intent ( inout ) :: &
       VG
@@ -258,7 +258,7 @@ contains
     end if
     nullify ( VG % Value )
 
-    if ( allocated ( VG % Selected ) )  deallocate ( VG % Selected )
+    if ( allocated ( VG % iaSelected ) )  deallocate ( VG % iaSelected )
     if ( allocated ( VG % lVector ) )   deallocate ( VG % lVector )
     if ( allocated ( VG % lVariable ) ) deallocate ( VG % lVariable )
 
@@ -271,7 +271,7 @@ contains
                  
     class ( VariableGroupForm ), intent ( inout ) :: &
       VG
-    type ( ArrayInteger_1D_Form ), dimension ( : ), intent ( in ), optional ::&
+    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
@@ -315,7 +315,7 @@ contains
     
     if ( present ( VariableOption ) ) then
       do iS = 1, VG % nVariables
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
         VG % Variable ( iVrbl ) = VariableOption ( iS )
         VG % lVariable ( iVrbl ) = len_trim ( VariableOption ( iS ) )
       end do

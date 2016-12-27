@@ -7,3 +7,6 @@ StructuredGridImage_Form.o: \
 StructuredGridImages.o:\
   StructuredGridImage_Form.o \
   StructuredGridImages.f90
+
+StructuredGridImages.a: $(STRUCTURED_GRID_IMAGES)
+	ar r StructuredGridImages.a $(STRUCTURED_GRID_IMAGES)

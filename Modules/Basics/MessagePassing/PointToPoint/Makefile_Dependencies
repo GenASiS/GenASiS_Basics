@@ -3,208 +3,164 @@ Message_Template.o: \
   MessagePassingBasics.o \
   Message_Template.f90
 
-MessageInteger_Form.o: \
+Message_I__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  MessageInteger_Form.f90
+  Message_I__Form.f90
 
-MessageBigInteger_Form.o: \
+Message_BI__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  MessageBigInteger_Form.f90
+  Message_BI__Form.f90
 
-MessageReal_Form.o: \
+Message_R__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  MessageReal_Form.f90
+  Message_R__Form.f90
 
-MessageComplex_Form.o: \
+Message_C__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  MessageComplex_Form.f90
+  Message_C__Form.f90
 
-IncomingMessageInteger_Form.o: \
+MessageIncoming_I__Form.o: \
   VariableManagement.o \
-  MessageInteger_Form.o \
-  IncomingMessageInteger_Form.f90
+  Message_I__Form.o \
+  MessageIncoming_I__Form.f90
 
-IncomingMessageBigInteger_Form.o: \
+MessageIncoming_BI__Form.o: \
   VariableManagement.o \
-  MessageBigInteger_Form.o \
-  IncomingMessageBigInteger_Form.f90
+  Message_BI__Form.o \
+  MessageIncoming_BI__Form.f90
 
-IncomingMessageReal_Form.o: \
+MessageIncoming_R__Form.o: \
   VariableManagement.o \
-  MessageReal_Form.o \
-  IncomingMessageReal_Form.f90
+  Message_R__Form.o \
+  MessageIncoming_R__Form.f90
 
-IncomingMessageComplex_Form.o: \
+MessageIncoming_C__Form.o: \
   VariableManagement.o \
-  MessageComplex_Form.o \
-  IncomingMessageComplex_Form.f90
+  Message_C__Form.o \
+  MessageIncoming_C__Form.f90
 
-OutgoingMessageInteger_Form.o: \
+MessageOutgoing_I__Form.o: \
   VariableManagement.o \
-  MessageInteger_Form.o \
-  OutgoingMessageInteger_Form.f90
+  Message_I__Form.o \
+  MessageOutgoing_I__Form.f90
 
-OutgoingMessageBigInteger_Form.o: \
+MessageOutgoing_BI__Form.o: \
   VariableManagement.o \
-  MessageBigInteger_Form.o \
-  OutgoingMessageBigInteger_Form.f90
+  Message_BI__Form.o \
+  MessageOutgoing_BI__Form.f90
 
-OutgoingMessageReal_Form.o: \
+MessageOutgoing_R__Form.o: \
   VariableManagement.o \
-  MessageReal_Form.o \
-  OutgoingMessageReal_Form.f90
+  Message_R__Form.o \
+  MessageOutgoing_R__Form.f90
 
-OutgoingMessageComplex_Form.o: \
+MessageOutgoing_C__Form.o: \
   VariableManagement.o \
-  MessageComplex_Form.o \
-  OutgoingMessageComplex_Form.f90
+  Message_C__Form.o \
+  MessageOutgoing_C__Form.f90
 
-MessageArray_Template.o: \
+Message_1D__Template.o: \
   VariableManagement.o \
   Message_Template.o \
-  MessageArray_Template.f90
+  Message_1D__Template.f90
 
-# MessageArrayInteger_Form.o: \
-#   VariableManagement.o \
-#   MessagePassingBasics.o \
-#   MessageInteger_Form.o \
-#   MessageArray_Template.o \
-#   IncomingMessageInteger_Form.o \
-#   OutgoingMessageInteger_Form.o \
-#   MessageArrayInteger_Form.f90
-
-# MessageArrayBigInteger_Form.o: \
-#   VariableManagement.o \
-#   MessagePassingBasics.o \
-#   MessageBigInteger_Form.o \
-#   MessageArray_Template.o \
-#   IncomingMessageBigInteger_Form.o \
-#   OutgoingMessageBigInteger_Form.o \
-#   MessageArrayBigInteger_Form.f90
-
-# MessageArrayReal_Form.o: \
-#   VariableManagement.o \
-#   MessagePassingBasics.o \
-#   MessageReal_Form.o \
-#   MessageArray_Template.o \
-#   IncomingMessageReal_Form.o \
-#   OutgoingMessageReal_Form.o \
-#   MessageArrayReal_Form.f90
-
-# MessageArrayComplex_Form.o: \
-#   VariableManagement.o \
-#   MessagePassingBasics.o \
-#   MessageComplex_Form.o \
-#   MessageArray_Template.o \
-#   IncomingMessageComplex_Form.o \
-#   OutgoingMessageComplex_Form.o \
-#   MessageArrayComplex_Form.f90
-
-IncomingMessageArrayInteger_Form.o: \
+MessageIncoming_1D_I__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  IncomingMessageInteger_Form.o \
-  MessageArray_Template.o \
-  IncomingMessageArrayInteger_Form.f90
-#  MessageArrayInteger_Form.o \
+  MessageIncoming_I__Form.o \
+  Message_1D__Template.o \
+  MessageIncoming_1D_I__Form.f90
 
-IncomingMessageArrayBigInteger_Form.o: \
+MessageIncoming_1D_BI__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  IncomingMessageBigInteger_Form.o \
-  MessageArray_Template.o \
-  IncomingMessageArrayBigInteger_Form.f90
-#  MessageArrayBigInteger_Form.o \
+  MessageIncoming_BI__Form.o \
+  Message_1D__Template.o \
+  MessageIncoming_1D_BI__Form.f90
 
-IncomingMessageArrayReal_Form.o: \
+MessageIncoming_1D_R__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  IncomingMessageReal_Form.o \
-  MessageArray_Template.o \
-  IncomingMessageArrayReal_Form.f90
-#  MessageArrayReal_Form.o \
+  MessageIncoming_R__Form.o \
+  Message_1D__Template.o \
+  MessageIncoming_1D_R__Form.f90
 
-IncomingMessageArrayComplex_Form.o: \
+MessageIncoming_1D_C__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  IncomingMessageComplex_Form.o \
-  MessageArray_Template.o \
-  IncomingMessageArrayComplex_Form.f90
-#  MessageArrayComplex_Form.o \
+  MessageIncoming_C__Form.o \
+  Message_1D__Template.o \
+  MessageIncoming_1D_C__Form.f90
 
-OutgoingMessageArrayInteger_Form.o: \
+MessageOutgoing_1D_I__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  OutgoingMessageInteger_Form.o \
-  MessageArray_Template.o \
-  OutgoingMessageArrayInteger_Form.f90
-#  MessageArrayInteger_Form.o \
+  MessageOutgoing_I__Form.o \
+  Message_1D__Template.o \
+  MessageOutgoing_1D_I__Form.f90
 
-OutgoingMessageArrayBigInteger_Form.o: \
+MessageOutgoing_1D_BI__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  OutgoingMessageBigInteger_Form.o \
-  MessageArray_Template.o \
-  OutgoingMessageArrayBigInteger_Form.f90
-#  MessageArrayBigInteger_Form.o \
+  MessageOutgoing_BI__Form.o \
+  Message_1D__Template.o \
+  MessageOutgoing_1D_BI__Form.f90
 
-OutgoingMessageArrayReal_Form.o: \
+MessageOutgoing_1D_R__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  OutgoingMessageReal_Form.o \
-  MessageArray_Template.o \
-  OutgoingMessageArrayReal_Form.f90
-#  MessageArrayReal_Form.o \
+  MessageOutgoing_R__Form.o \
+  Message_1D__Template.o \
+  MessageOutgoing_1D_R__Form.f90
 
-OutgoingMessageArrayComplex_Form.o: \
+MessageOutgoing_1D_C__Form.o: \
   VariableManagement.o \
   MessagePassingBasics.o \
   Message_Template.o \
-  OutgoingMessageComplex_Form.o \
-  MessageArray_Template.o \
-  OutgoingMessageArrayComplex_Form.f90
-#  MessageArrayComplex_Form.o \
+  MessageOutgoing_C__Form.o \
+  Message_1D__Template.o \
+  MessageOutgoing_1D_C__Form.f90
 
 PointToPoint.o: \
   Message_Template.o \
-  MessageInteger_Form.o \
-  MessageBigInteger_Form.o \
-  MessageReal_Form.o \
-  MessageComplex_Form.o \
-  IncomingMessageInteger_Form.o \
-  IncomingMessageBigInteger_Form.o \
-  IncomingMessageReal_Form.o \
-  IncomingMessageComplex_Form.o \
-  OutgoingMessageInteger_Form.o \
-  OutgoingMessageBigInteger_Form.o \
-  OutgoingMessageReal_Form.o \
-  OutgoingMessageComplex_Form.o \
-  MessageArray_Template.o \
-  IncomingMessageArrayInteger_Form.o \
-  IncomingMessageArrayBigInteger_Form.o \
-  IncomingMessageArrayReal_Form.o \
-  IncomingMessageArrayComplex_Form.o \
-  OutgoingMessageArrayInteger_Form.o \
-  OutgoingMessageArrayBigInteger_Form.o \
-  OutgoingMessageArrayReal_Form.o \
-  OutgoingMessageArrayComplex_Form.o \
+  Message_I__Form.o \
+  Message_BI__Form.o \
+  Message_R__Form.o \
+  Message_C__Form.o \
+  MessageIncoming_I__Form.o \
+  MessageIncoming_BI__Form.o \
+  MessageIncoming_R__Form.o \
+  MessageIncoming_C__Form.o \
+  MessageOutgoing_I__Form.o \
+  MessageOutgoing_BI__Form.o \
+  MessageOutgoing_R__Form.o \
+  MessageOutgoing_C__Form.o \
+  Message_1D__Template.o \
+  MessageIncoming_1D_I__Form.o \
+  MessageIncoming_1D_BI__Form.o \
+  MessageIncoming_1D_R__Form.o \
+  MessageIncoming_1D_C__Form.o \
+  MessageOutgoing_1D_I__Form.o \
+  MessageOutgoing_1D_BI__Form.o \
+  MessageOutgoing_1D_R__Form.o \
+  MessageOutgoing_1D_C__Form.o \
   PointToPoint.f90
-#  MessageArrayInteger_Form.o \
-#  MessageArrayBigInteger_Form.o \
-#  MessageArrayReal_Form.o \
-#  MessageArrayComplex_Form.o \
+
+PointToPoint.a: $(POINT_TO_POINT)
+	ar r PointToPoint.a $(POINT_TO_POINT)
+

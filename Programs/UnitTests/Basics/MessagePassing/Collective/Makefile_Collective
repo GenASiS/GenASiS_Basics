@@ -5,25 +5,25 @@ include $(PATH_GENASIS)/Build/Makefile_Build
 all: \
   REDUCTION_Singleton_Test CollectiveOperation_Form_Test
 
-REDUCTION_Singleton_Test: REDUCTION_Singleton_Test.o
+REDUCTION_Singleton_Test: VariableManagement.a Display.a \
+  MessagePassingBasics.a REDUCTION_Singleton_Test.o
 	$(LINK) $(FLAGS) \
           -o REDUCTION_Singleton_Test_$(MACHINE) \
-          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING_BASICS) \
-	  REDUCTION_Singleton.o REDUCTION_Singleton_Test.o
+	  REDUCTION_Singleton_Test.o REDUCTION_Singleton.o \
+          MessagePassingBasics.a Display.a VariableManagement.a
 
-CollectiveOperation_Form_Test: CollectiveOperation_Form_Test.o
+CollectiveOperation_Form_Test: VariableManagement.a Display.a \
+  MessagePassingBasics.a PointToPoint.a CollectiveOperation_Form_Test.o
 	$(LINK) $(FLAGS) \
           -o CollectiveOperation_Form_Test_$(MACHINE) \
-          $(VARIABLE_MANAGEMENT) $(DISPLAY) $(MESSAGE_PASSING_BASICS) \
-	  $(POINT_TO_POINT) REDUCTION_Singleton.o \
-          CollectiveOperation_Template.o \
-          CollectiveOperationInteger_Form.o \
-          CollectiveOperationBigInteger_Form.o \
-          CollectiveOperationReal_Form.o CollectiveOperationComplex_Form.o \
-	  CollectiveOperation_Form_Test.o
+          CollectiveOperation_Form_Test.o CollectiveOperation_C__Form.o \
+          CollectiveOperation_R__Form.o CollectiveOperation_BI__Form.o \
+          CollectiveOperation_I__Form.o CollectiveOperation_Template.o \
+          REDUCTION_Singleton.o \
+          PointToPoint.a MessagePassingBasics.a Display.a VariableManagement.a
 
 clean:
-	rm -f *.o *.mod *.ld
+	rm -f *.o *.a *.mod *.ld
 
 clobber: clean
 	rm -f REDUCTION_Singleton_Test_*
@@ -47,8 +47,8 @@ CollectiveOperation_Form_Test.o: \
   Display.o \
   MessagePassingBasics.o \
   REDUCTION_Singleton.o \
-  CollectiveOperationInteger_Form.o \
-  CollectiveOperationBigInteger_Form.o \
-  CollectiveOperationReal_Form.o \
-  CollectiveOperationComplex_Form.o \
+  CollectiveOperation_I__Form.o \
+  CollectiveOperation_BI__Form.o \
+  CollectiveOperation_R__Form.o \
+  CollectiveOperation_C__Form.o \
   CollectiveOperation_Form_Test.f90

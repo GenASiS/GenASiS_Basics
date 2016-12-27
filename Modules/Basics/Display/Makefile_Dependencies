@@ -35,3 +35,6 @@ Display.o: \
   ShowMessage.o \
   Show_Command.o \
   Display.f90
+
+Display.a: $(DISPLAY)
+	ar r Display.a $(DISPLAY)

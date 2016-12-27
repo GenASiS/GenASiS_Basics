@@ -4,7 +4,6 @@
 module ReadLabelValue_Command
   
   use VariableManagement
-use Display
 
   implicit none
   private 
@@ -242,7 +241,8 @@ contains
   end subroutine ReadLabelValueLogical_0D
 
   
-  subroutine ReadLabelValueCharacter_0D ( Label, Value, Buffer, SuccessOption )
+  subroutine ReadLabelValueCharacter_0D &
+               ( Label, Value, Buffer, SuccessOption )
     
     character ( * ), intent ( inout ) :: &
       Label
@@ -500,8 +500,9 @@ contains
       Value
     character ( * ), intent ( in ) :: &
       Buffer
-    type ( MeasuredValueForm ), dimension ( : ), intent ( inout ), optional :: &
-      InputUnitOption
+    type ( MeasuredValueForm ), dimension ( : ), intent ( inout ), &
+      optional :: &
+        InputUnitOption
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
     logical ( KDL ), intent ( out ), optional :: &

@@ -10,4 +10,7 @@ program KIND_BIG_Singleton_Test
   print *
   print *, 'KBI = ', KBI
 
+  print *
+  print *, 'huge ( 0_KBI ) = ', huge ( 0_KBI )
+
 end program KIND_BIG_Singleton_Test

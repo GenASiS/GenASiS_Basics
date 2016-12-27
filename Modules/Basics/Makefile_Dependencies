@@ -11,3 +11,6 @@ Basics.o: \
   FileSystem.o \
   Runtime.o \
   Basics.f90
+
+Basics.a: $(BASICS)
+	ar r Basics.a $(BASICS)

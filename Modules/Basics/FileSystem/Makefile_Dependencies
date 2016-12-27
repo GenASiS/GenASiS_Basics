@@ -13,3 +13,6 @@ FileSystem.o: \
   UnstructuredGridImages.o \
   PointGridImages.o \
   FileSystem.f90
+
+FileSystem.a: $(FILE_SYSTEM)
+	ar r FileSystem.a $(FILE_SYSTEM)

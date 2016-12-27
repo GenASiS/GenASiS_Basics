@@ -35,7 +35,7 @@ program FindParameter_Command_Test
     C
 
   allocate ( C )
-  call C % Initialize ( WorldOption = .true. )
+  call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
 
   call UNIT % Initialize ( )
@@ -52,7 +52,8 @@ program FindParameter_Command_Test
   Buffer ( 10 )  &
     = 'ArrayRealUnit=10.5~SECOND,20.5,30.5~MILLISECOND,40.5,50.5~MILLISECOND'
   Buffer ( 11 )  &
-    = 'ArrayMeasuredValue=10.5~SECOND,20.5,30.5~MILLISECOND,40.5,50.5~MILLISECOND'
+    = 'ArrayMeasuredValue=10.5~SECOND,20.5,30.5~MILLISECOND,40.5,' &
+      // '50.5~MILLISECOND'
   Buffer ( 12 ) = 'ArrayLogical=T,F,False,True,True,F'
   Buffer ( 13 ) = 'ArrayString=Lorem, ipsum, dolor, sit, amet'
 

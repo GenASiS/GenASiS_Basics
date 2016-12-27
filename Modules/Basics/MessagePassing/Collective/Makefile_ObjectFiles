@@ -1,8 +1,8 @@
 COLLECTIVE = \
-  REDUCTION_Singleton.o \
+  Collective.o \
+  CollectiveOperation_C__Form.o \
+  CollectiveOperation_R__Form.o \
+  CollectiveOperation_BI__Form.o \
+  CollectiveOperation_I__Form.o \
   CollectiveOperation_Template.o \
-  CollectiveOperationInteger_Form.o \
-  CollectiveOperationBigInteger_Form.o \
-  CollectiveOperationReal_Form.o \
-  CollectiveOperationComplex_Form.o \
-  Collective.o
+  REDUCTION_Singleton.o

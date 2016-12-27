@@ -1,10 +1,6 @@
 README: BUILDING GENASIS APPLICATIONS, EXAMPLES, AND/OR UNIT TESTS
 --------------------------------------------------------------------------
 
-Method paper accompanying this release is available at:
-http://dx.doi.org/10.1016/j.cpc.2015.06.001
-or the pre-print arXiv http://arxiv.org/abs/1507.02506 
-
 A machine-specific Makefile is needed to build GenASiS programs. Several 
 sample Makefiles are provided under the subdirectory Build/Machines. 
 Minor modifications of one of the provided Makefiles that most
@@ -24,11 +20,11 @@ type:
 > export GENASIS_MACHINE=Linux_GNU
 
 In most common computing environments with a generic MPI library, the
-fluid dynamics example programs (described in the accompanying paper) can then be
-built and executed (here with 8 MPI processes) with the following commands:
+fluid dynamics example programs (described in the accompanying paper) can then
+be built and executed (here with 8 MPI processes) with the following commands:
 
 > cd Programs/Examples/Basics/FluidDynamics/Executables
-> make
+> make PURPOSE=OPTIMIZE all
 > mpirun -np 8 ./SineWaveAdvection_Linux_GNU nCells=128,128,128
 > mpirun -np 8 ./SawtoothWaveAdvection_Linux_GNU nCells=128,128,128 \
 nWavelengths=2,2,2
@@ -76,7 +72,7 @@ for example, as the follows:
 The molecular dynamics programs described in the accompanying paper can be 
 built and executed in a manner similar to those in FluidDynamics. The 
 directory MolecularDynamics is also found under Programs/Examples/Basics.
-A blanket "make" command in the Executables subdirectory compiles both 
+A blanket "make all" command in the Executables subdirectory compiles both 
 ArgonEquilibrium and ClusterFormation}. For both programs, all results 
 presented in the accompanying paper were obtained with parameters 
 nSteps=10000 and nWrite=1000. Various numbers of particles and processes 
@@ -84,8 +80,9 @@ used for different runs are mentioned in the accompanying paper. In the case
 of ClusterFormation, the number of particles is directly specified by a 
 parameter nParticles. For ArgonEquilibrium a parameter nUnitCellsRoot is 
 used instead; the number of particles is 4 * ( nUnitCellsRoot ** 3 ). Thus 
-the values 8, 12, 16, and 20 for nUnitCellsRoot correspond to 2048, 6912, 16384, and 32000 particles respectively. Specification of the number density and 
-temperature parameters for different phases of argon is discussed in the
+the values 8, 12, 16, and 20 for nUnitCellsRoot correspond to 2048, 6912,
+16384, and 32000 particles respectively. Specification of the number density
+and temperature parameters for different phases of argon is discussed in the
 accompanying paper.
 
 Unit test programs exercising individual GenASIS classes can similarly be
@@ -95,20 +92,20 @@ commands build and execute the unit test programs for classes in the
 "Runtime" division:
 
 > cd Programs/UnitTests/Basics/Runtime/Executables
-> make
+> make all
 > mpirun -np 1 [program_name]
 
-This blanket "make" builds all the unit test targets in the Makefile fragment 
-Programs/Basics/Runtime/Makefile_Runtime. Individual targets of course also 
-can be built.
+This blanket "make all" builds all the unit test targets in the Makefile
+fragment Programs/Basics/Runtime/Makefile_Runtime. Individual targets of
+course also can be built.
 
-GenASiS Basics has been tested with the following compilers: GNU
-Fortran compiler (gfortran, part of GCC) version 4.9, NAG Fortran compiler
-version 5.3.1, and Cray Compiler Environment version 8.2.5. Newer versions
+GenASiS Basics Version 2 has been tested with the following compilers: GNU
+Fortran compiler (gfortran, part of GCC) version 6.1.0, Intel Fortran 16.0.03,
+and Cray Compiler Environment version 8.5.3. Newer versions
 of these compilers are likely to work as well. GenASiS Basics is written in 
-full compliance with the Fortran 2003 standard (with the addition of a couple of minor new features
-of Fortan 2008, including the "impure" attribute and finding a new
-unit number in the "open" statement) to enhance portability.
+full compliance with the Fortran 2003 standard (with the addition of a couple
+of minor new features of Fortan 2008, including the "impure" attribute and
+finding a new unit number in the "open" statement) to enhance portability.
 
 Authors:
 Christian Cardall (cardallcy@ornl.gov)

@@ -4,10 +4,11 @@ include $(PATH_GENASIS)/Build/Makefile_Build
 
 all: FileDifference
 
-FileDifference: FileDifference.o
+FileDifference: Basics.a FileDifference.o
 	$(LINK) $(FLAGS) \
-          -o FileDifference_$(MACHINE) $(BASICS) L1_Norm_Function.o \
-          FileDifference.o $(LIBRARIES)
+          -o FileDifference_$(MACHINE) \
+          FileDifference.o L1_Norm_Function.o \
+          Basics.a $(LIBRARIES)
 
 clean:
 	rm -f *.o *.mod *.ld

@@ -85,7 +85,7 @@ contains
       V_Average
     real ( KDR ), dimension ( 3 ) :: &
       CenterOfMass
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO, &
       CO_Correlation
 

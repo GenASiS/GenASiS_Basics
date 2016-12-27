@@ -1,10 +1,12 @@
 SPECIFIERS = \
-  KIND_DEFAULT_Singleton.o \
-  KIND_BIG_Singleton.o \
-  LEN_DEFAULT_Singleton.o \
-  Split_Command.o \
-  Join_Command.o \
-  MeasuredValue_Form.o \
-  CONSTANT_Singleton.o \
+  Specifiers.o \
   UNIT_Singleton.o \
-  Specifiers.o
+  CONSTANT_Singleton.o \
+  MeasuredValue_Form.o \
+  Join_Command.o \
+  Split_Command.o \
+  LEN_DEFAULT_Singleton.o \
+  KIND_TINY_Singleton.o \
+  KIND_SMALL_Singleton.o \
+  KIND_BIG_Singleton.o \
+  KIND_DEFAULT_Singleton.o

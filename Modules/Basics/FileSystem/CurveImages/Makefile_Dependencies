@@ -8,3 +8,6 @@ CurveImage_Form.o: \
 CurveImages.o: \
   CurveImage_Form.o \
   CurveImages.f90
+
+CurveImages.a: $(CURVE_IMAGES)
+	ar r CurveImages.a $(CURVE_IMAGES)

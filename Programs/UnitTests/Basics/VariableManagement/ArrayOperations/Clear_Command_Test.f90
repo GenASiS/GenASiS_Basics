@@ -62,7 +62,7 @@ program Clear_Command_Test
   call Clear ( Integer_1D )
   call Clear ( Integer_2D )
   call Clear ( Integer_3D )
-  call Clear ( Integer_4D )
+!  call Clear ( Integer_4D )
 
   print *, 'Integer_1D = ', Integer_1D
   print *, 'Integer_2D = ', Integer_2D
@@ -83,10 +83,10 @@ program Clear_Command_Test
   print *, 'BigInteger_4D = ', BigInteger_4D
   print *
 
-  call Clear ( BigInteger_1D )
-  call Clear ( BigInteger_2D )
-  call Clear ( BigInteger_3D )
-  call Clear ( BigInteger_4D )
+!  call Clear ( BigInteger_1D )
+!  call Clear ( BigInteger_2D )
+!  call Clear ( BigInteger_3D )
+!  call Clear ( BigInteger_4D )
 
   print *, 'BigInteger_1D = ', BigInteger_1D
   print *, 'BigInteger_2D = ', BigInteger_2D
@@ -110,7 +110,7 @@ program Clear_Command_Test
   call Clear ( Real_1D )
   call Clear ( Real_2D )
   call Clear ( Real_3D )
-  call Clear ( Real_4D )
+!  call Clear ( Real_4D )
 
   print *, 'Real_1D = ', Real_1D
   print *, 'Real_2D = ', Real_2D
@@ -131,10 +131,10 @@ program Clear_Command_Test
   print *, 'Complex_4D = ', Complex_4D
   print *
 
-  call Clear ( Complex_1D )
-  call Clear ( Complex_2D )
+!  call Clear ( Complex_1D )
+!  call Clear ( Complex_2D )
   call Clear ( Complex_3D )
-  call Clear ( Complex_4D )
+!  call Clear ( Complex_4D )
 
   print *, 'Complex_1D = ', Complex_1D
   print *, 'Complex_2D = ', Complex_2D
@@ -156,9 +156,9 @@ program Clear_Command_Test
   print *
 
   call Clear ( Logical_1D )
-  call Clear ( Logical_2D )
-  call Clear ( Logical_3D )
-  call Clear ( Logical_4D )
+!  call Clear ( Logical_2D )
+!  call Clear ( Logical_3D )
+!  call Clear ( Logical_4D )
 
   print *, 'Logical_1D = ', Logical_1D
   print *, 'Logical_2D = ', Logical_2D

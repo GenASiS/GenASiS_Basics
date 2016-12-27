@@ -238,7 +238,7 @@ contains
     real ( KDR ), dimension ( 3 ) :: &
       CellOrigin, &
       AverageSpeed
-    type ( CollectiveOperationRealForm ) :: &
+    type ( CollectiveOperation_R_Form ) :: &
       CO
 
     call Show ( 'Setting particle initial conditions', CONSOLE % INFO_3 )

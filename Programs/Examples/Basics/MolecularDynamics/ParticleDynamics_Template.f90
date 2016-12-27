@@ -138,7 +138,8 @@ contains
     PD % TimeUnit = TimeUnit
 
     PD % TimeStepFactor = 0.004_KDR
-    call PROGRAM_HEADER % GetParameter ( PD % TimeStepFactor, 'TimeStepFactor' )
+    call PROGRAM_HEADER % GetParameter &
+           ( PD % TimeStepFactor, 'TimeStepFactor' )
 
     Step = 'LEAPFROG'
     call PROGRAM_HEADER % GetParameter ( Step, 'Step' )
@@ -173,18 +174,19 @@ contains
       PD
 
     integer ( KDI ) :: &
-      iC  !-- iCycle
-    type ( MeasuredValueForm ) :: &
-      StartWallTime, &
-      FinishWallTime
+      iC, &  !-- iCycle
+      iTimerComputation
     type ( VariableGroupForm ), dimension ( 1 ) :: &
       VGP
+
+    call PROGRAM_HEADER % AddTimer ( 'Computational', iTimerComputation )
 
     call Show ( 'Evolving particles', CONSOLE % INFO_3 )
 
     associate &
       ( DP => PD % DistributedParticles, &
-        MP => PD % DistributedParticles % MyParticles )
+        MP => PD % DistributedParticles % MyParticles, &
+        T => PROGRAM_HEADER % Timer ( iTimerComputation ) )
 
     PD % Time = 0.0_KDR
     call Show ( PD % Time, PD % TimeUnit, 'Time', CONSOLE % INFO_3 )
@@ -200,7 +202,7 @@ contains
            ( TimeOption = PD % Time / PD % TimeUnit, &
              CycleNumberOption = PD % iCycle )
 
-    StartWallTime = WallTime ( )
+    call T % Start ( ) 
 
     do iC = 1, PD % nCycles
 
@@ -219,29 +221,23 @@ contains
 
       if ( mod ( iC, PD % WriteCycleInterval ) == 0 ) then
 
-        FinishWallTime = WallTime ( )
-        PROGRAM_HEADER % ComputationalWallTime &
-          = PROGRAM_HEADER % ComputationalWallTime &
-              + ( FinishWallTime - StartWallTime )
+        call T % Stop ( )
 
         call DP % Write &
                ( TimeOption = PD % Time / PD % TimeUnit, &
                  CycleNumberOption = PD % iCycle )
 
-        StartWallTime = WallTime ( )
-
+        call T % Start ( )
+        
       end if
 
     end do
 
-    FinishWallTime = WallTime ( )
-    PROGRAM_HEADER % ComputationalWallTime &
-      = PROGRAM_HEADER % ComputationalWallTime &
-          + ( FinishWallTime - StartWallTime )
-
+    call T % Stop ( )
+    
     call WriteTimeSeries ( PD )
 
-    end associate !-- DP
+    end associate !-- DP, etc.
 
   end subroutine Evolve
 

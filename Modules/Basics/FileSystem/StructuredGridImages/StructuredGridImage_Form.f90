@@ -11,7 +11,7 @@ module StructuredGridImage_Form
   implicit none 
   private
   
-  include 'silo.inc'
+  include 'silo_f9x.inc'
   
   type, public, extends ( GridImageSiloTemplate ) &
     :: StructuredGridImageForm 
@@ -24,7 +24,9 @@ module StructuredGridImage_Form
         oProperCellNodeLow  = 0, &
         oProperCellNodeHigh = 0, &
         nNodes              = 0, &
-        nCells              = 0
+        nCells              = 0, &
+        oValueInner      = 0, &
+        oValueOuter      = 0
       integer ( KDI ), dimension ( : ), allocatable :: & 
         PillarHash
   contains
@@ -50,6 +52,8 @@ module StructuredGridImage_Form
       ReadMesh
     procedure, private, pass :: &
       ReadVariableGroup
+    procedure, public, pass :: &
+      ClearGrid
     final :: &
       Finalize
   end type StructuredGridImageForm
@@ -71,28 +75,36 @@ contains
 
 
   subroutine SetGridUnigrid &
-               ( SGI, Directory, Edge, nCells, nDimensions, nProperCells, &
-                 nGhostCells, nGhostLayers, CoordinateLabelOption, &
+               ( SGI, Directory, Edge, nCells, nGhostInner, &
+                 nGhostOuter, oValueInner, oValueOuter, nDimensions, &
+                 nProperCells, nGhostCells, CoordinateLabelOption, &
                  CoordinateUnitOption )
 
     class ( StructuredGridImageForm ), intent ( inout ), target :: &
       SGI 
     character ( * ), intent ( in ) :: &
       Directory    
-    type ( ArrayReal_1D_Form ), dimension ( : ), intent ( in ) :: &
+    type ( Real_1D_Form ), dimension ( : ), intent ( in ) :: &
       Edge
     integer ( KDI ), dimension ( : ), intent ( in ) :: &
-      nCells
+      nCells, &
+      nGhostInner, &
+      nGhostOuter, &
+      oValueInner, &
+      oValueOuter
     integer ( KDI ), intent ( in ) :: &
       nDimensions, &
       nProperCells, &
-      nGhostCells, &
-      nGhostLayers
+      nGhostCells
     character ( * ), dimension ( : ), intent ( in ), optional :: &
       CoordinateLabelOption
     type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
       CoordinateUnitOption
 
+    integer ( KDI ) :: &
+      iLB, &  !-- iLowerBound
+      iUB     !-- iUpperBound
+    
     SGI % oValue      = 0
     SGI % nDimensions = nDimensions
     SGI % nTotalCells = nProperCells + nGhostCells
@@ -103,18 +115,24 @@ contains
     SGI % MultiMeshType = DB_QUAD_RECT
     SGI % MultiVariableType = DB_QUADVAR
 
-    SGI % nNodes ( 1 ) = size ( Edge ( 1 ) % Value )
+    iLB  =  oValueInner ( 1 )  +  1
+    iUB  =  size ( Edge ( 1 ) % Value )  -  oValueOuter ( 1 )
+    SGI % nNodes ( 1 ) = size ( Edge ( 1 ) % Value ( iLB : iUB ) )
     allocate ( SGI % NodeCoordinate_1 ( SGI % nNodes ( 1 ) ) )
-    SGI % NodeCoordinate_1 = Edge ( 1 ) % Value
+    SGI % NodeCoordinate_1 = Edge ( 1 ) % Value ( iLB : iUB )
 
-    SGI % nNodes ( 2 ) = size ( Edge ( 2 ) % Value )
+    iLB  =  oValueInner ( 2 )  +  1
+    iUB  =  size ( Edge ( 2 ) % Value )  -  oValueOuter ( 2 )
+    SGI % nNodes ( 2 ) = size ( Edge ( 2 ) % Value ( iLB : iUB ) )
     allocate ( SGI % NodeCoordinate_2 ( SGI % nNodes ( 2 ) ) )
-    SGI % NodeCoordinate_2 = Edge ( 2 ) % Value
+    SGI % NodeCoordinate_2 = Edge ( 2 ) % Value ( iLB : iUB )
     
     if ( SGI % nDimensions > 2 ) then
-      SGI % nNodes ( 3 ) = size ( Edge ( 3 ) % Value )
+      iLB  =  oValueInner ( 3 )  +  1
+      iUB  =  size ( Edge ( 3 ) % Value )  -  oValueOuter ( 3 )
+      SGI % nNodes ( 3 ) = size ( Edge ( 3 ) % Value ( iLB : iUB ) )
       allocate ( SGI % NodeCoordinate_3 ( SGI % nNodes ( 3 ) ) )
-      SGI % NodeCoordinate_3 = Edge ( 3 ) % Value
+      SGI % NodeCoordinate_3 = Edge ( 3 ) % Value ( iLB : iUB )
     else
       SGI % nNodes ( 3 ) = 0
       allocate ( SGI % NodeCoordinate_3 ( 0 ) )
@@ -122,11 +140,16 @@ contains
 
     SGI % oProperCellNodeLow  = 0
     SGI % oProperCellNodeHigh = 0
-    SGI % oProperCellNodeLow  ( : SGI % nDimensions ) = nGhostLayers
-    SGI % oProperCellNodeHigh ( : SGI % nDimensions ) = nGhostLayers
+    SGI % oProperCellNodeLow  ( : SGI % nDimensions ) &
+      = nGhostInner ( : SGI % nDimensions )
+    SGI % oProperCellNodeHigh ( : SGI % nDimensions ) &
+      = nGhostOuter ( : SGI % nDimensions )
 
     SGI % nCells = reshape ( nCells, shape = [ 3 ], pad = [ 1 ] )
     
+    SGI % oValueInner = oValueInner
+    SGI % oValueOuter = oValueOuter
+
     SGI % Directory = Directory
     if ( trim ( SGI % Directory ) == '/' ) SGI % Directory = ''
     
@@ -446,15 +469,10 @@ contains
   end subroutine Read
 
   
-  elemental subroutine Finalize ( SGI )
-    
-    type ( StructuredGridImageForm ), intent ( inout ) :: & 
-      SGI 
-    
-    nullify ( SGI % Stream )
+  subroutine ClearGrid ( SGI )
 
-    if ( allocated ( SGI % VariableGroup ) ) &
-      deallocate ( SGI % VariableGroup )
+    class ( StructuredGridImageForm ), intent ( inout ) :: & 
+      SGI 
     
     if ( allocated ( SGI % NodeCoordinate_3 ) ) &
       deallocate ( SGI % NodeCoordinate_3 )
@@ -466,6 +484,21 @@ contains
     if ( allocated ( SGI % PillarHash ) ) &
       deallocate ( SGI % PillarHash ) 
       
+  end subroutine ClearGrid
+
+
+  impure elemental subroutine Finalize ( SGI )
+    
+    type ( StructuredGridImageForm ), intent ( inout ) :: & 
+      SGI 
+    
+    nullify ( SGI % Stream )
+
+    if ( allocated ( SGI % VariableGroup ) ) &
+      deallocate ( SGI % VariableGroup )
+
+    call SGI % ClearGrid ( )
+
   end subroutine Finalize 
   
   
@@ -686,14 +719,25 @@ contains
       Centering, &
       SiloOptionList, &
       Error
-    real ( KDR ), dimension ( : ), pointer :: &
+    real ( KDR ), dimension ( : ), allocatable, target :: &
       Value
+    real ( KDR ), dimension ( :, :, : ), pointer :: &
+      Value_PGF, &  !-- Value_ProperGhostFull
+      Value_PG      !-- Value_ProperGhost
     character ( LDF ) :: &
       MeshDirectory
   
-    if ( allocated ( SGI % PillarHash ) ) &
+    associate &
+      ( nC  => SGI % nCells, &
+        oVI => SGI % oValueInner, &
+        oVO => SGI % oValueOuter )
+
+    if ( allocated ( SGI % PillarHash ) ) then
       allocate ( Value ( size ( SGI % PillarHash ) ) )
-  
+    else
+      allocate ( Value ( product ( nC ) ) )
+    end if
+
     if ( all ( SGI % nNodes == SGI % nCells ) ) then
       Centering = DB_NODECENT
     else
@@ -716,7 +760,7 @@ contains
     
       do iS = 1, VG % nVariables
         
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
         
         call Show ( 'Writing a Variable (structured)', CONSOLE % INFO_6 )
         call Show ( iS, 'iSelected', CONSOLE % INFO_6 )
@@ -728,7 +772,14 @@ contains
               = VG % Value ( SGI % oValue + SGI % PillarHash ( iV ), iVrbl )
           end do
         else
-          Value => VG % Value ( SGI % oValue + 1 :, iVrbl )
+          Value_PGF ( -oVI ( 1 ) + 1 : nC ( 1 ) + oVO ( 1 ), &
+                      -oVI ( 2 ) + 1 : nC ( 2 ) + oVO ( 2 ), &
+                      -oVI ( 3 ) + 1 : nC ( 3 ) + oVO ( 3 ) ) &
+            => VG % Value ( SGI % oValue + 1 :, iVrbl )
+          Value_PG ( 1 : nC ( 1 ), 1 : nC ( 2 ), 1 : nC ( 3 ) ) &
+            => Value 
+          call Copy ( Value_PGF ( 1 : nC ( 1 ), 1 : nC ( 2 ), 1 : nC ( 3 ) ), &
+                      Value_PG ( 1 : nC ( 1 ), 1 : nC ( 2 ), 1 : nC ( 3 ) ) )
         end if
         
         nSiloOptions = 0
@@ -813,8 +864,9 @@ contains
   
     end do
   
-    if ( allocated ( SGI % PillarHash ) ) deallocate ( Value )
-    nullify ( Value )
+    end associate !-- nC, etc.
+
+    nullify ( Value_PG, Value_PGF )
 
   end subroutine WriteVariableGroup 
   
@@ -869,7 +921,7 @@ contains
       
       do iS = 1, VG % nVariables
       
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
         VariableName = trim ( VG % Variable ( iVrbl ) ) // c_null_char
 
         DB_QV_Handle = DB_GetQuadVariable ( DB_File, VariableName )

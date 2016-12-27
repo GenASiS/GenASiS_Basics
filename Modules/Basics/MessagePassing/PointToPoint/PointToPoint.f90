@@ -1,30 +1,26 @@
 module PointToPoint
 
   use Message_Template
-  use MessageInteger_Form
-  use MessageBigInteger_Form
-  use MessageReal_Form
-  use MessageComplex_Form
-  use IncomingMessageInteger_Form
-  use IncomingMessageBigInteger_Form
-  use IncomingMessageReal_Form
-  use IncomingMessageComplex_Form
-  use OutgoingMessageInteger_Form
-  use OutgoingMessageBigInteger_Form
-  use OutgoingMessageReal_Form
-  use OutgoingMessageComplex_Form
-  use MessageArray_Template
-!  use MessageArrayInteger_Form
-!  use MessageArrayBigInteger_Form
-!  use MessageArrayReal_Form
-!  use MessageArrayComplex_Form
-  use IncomingMessageArrayInteger_Form
-  use IncomingMessageArrayBigInteger_Form
-  use IncomingMessageArrayReal_Form
-  use IncomingMessageArrayComplex_Form
-  use OutgoingMessageArrayInteger_Form
-  use OutgoingMessageArrayBigInteger_Form
-  use OutgoingMessageArrayReal_Form
-  use OutgoingMessageArrayComplex_Form
+  use Message_I__Form
+  use Message_BI__Form
+  use Message_R__Form
+  use Message_C__Form
+  use MessageIncoming_I__Form
+  use MessageIncoming_BI__Form
+  use MessageIncoming_R__Form
+  use MessageIncoming_C__Form
+  use MessageOutgoing_I__Form
+  use MessageOutgoing_BI__Form
+  use MessageOutgoing_R__Form
+  use MessageOutgoing_C__Form
+  use Message_1D__Template
+  use MessageIncoming_1D_I__Form
+  use MessageIncoming_1D_BI__Form
+  use MessageIncoming_1D_R__Form
+  use MessageIncoming_1D_C__Form
+  use MessageOutgoing_1D_I__Form
+  use MessageOutgoing_1D_BI__Form
+  use MessageOutgoing_1D_R__Form
+  use MessageOutgoing_1D_C__Form
 
 end module PointToPoint

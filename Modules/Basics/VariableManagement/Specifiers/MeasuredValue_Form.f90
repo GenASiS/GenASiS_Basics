@@ -447,7 +447,7 @@ contains
   end function SubtractionInteger_MV
    
   
-  elemental function Product_MV_MV &
+  impure elemental function Product_MV_MV &
               ( Multiplier, Multiplicand ) result ( P_MV_MV )
   
     class ( MeasuredValueForm ), intent ( in ) :: &
@@ -579,15 +579,20 @@ contains
   end function Power_MV_Real
   
 
-  elemental function Quotient_MV_MV ( Dividend, Divisor ) result ( Q_MV_MV )
+  impure elemental function Quotient_MV_MV ( Dividend, Divisor ) &
+                              result ( Q_MV_MV )
     
     class ( MeasuredValueForm ), intent ( in ) :: &
       Dividend, &
       Divisor
     type ( MeasuredValueForm ) :: &
+      P_MV_I, &
       Q_MV_MV
     
-    Q_MV_MV = Dividend * Divisor ** ( -1 )
+    !-- FIXME: Workaround for GCC 5.1 bug 66257
+    P_MV_I  = Divisor ** ( -1 )
+    
+    Q_MV_MV = Dividend * P_MV_I
 
   end function Quotient_MV_MV
   
@@ -617,9 +622,13 @@ contains
     class ( MeasuredValueForm ), intent ( in ) :: &
       Divisor
     type ( MeasuredValueForm ) :: &
+      P_MV_I, &
       Q_R_MV
- 
-    Q_R_MV = Dividend * Divisor ** ( -1 )
+    
+    !-- FIXME: Workaround for GCC 5.1 bug 66257
+    P_MV_I = Divisor ** ( -1 )
+    
+    Q_R_MV = Dividend * P_MV_I
 
   end function QuotientReal_MV
   
@@ -649,9 +658,13 @@ contains
     class ( MeasuredValueForm ), intent ( in ) :: &
       Divisor
     type ( MeasuredValueForm ) :: &
+      P_MV_I, &
       Q_I_MV
- 
-    Q_I_MV = real ( Dividend, KDR ) * Divisor ** ( -1 )
+    
+    !-- FIXME: Workaround for GCC 5.1 bug 66257
+    P_MV_I = Divisor ** ( -1 )
+    
+    Q_I_MV = real ( Dividend, KDR ) * P_MV_I
 
   end function QuotientInteger_MV
   
@@ -765,7 +778,7 @@ contains
 
     NET = .false.
 
-    if ( MV_1 % Unit == MV_2 % Unit &
+    if ( MV_1 % Unit /= MV_2 % Unit &
          .and. MV_1 % Number /= MV_2 % Number ) &
       NET = .true.
 
@@ -1196,7 +1209,7 @@ contains
   end function LessThanEqualToInteger_MV
 
 
-  elemental function ProductUnit ( Unit_1, Unit_2 ) result ( P_U )
+  recursive function ProductUnit ( Unit_1, Unit_2 ) result ( P_U )
 
     character ( * ), intent ( in ) :: &
       Unit_1, &
@@ -1205,12 +1218,15 @@ contains
       P_U
 
     integer ( KDI ) :: &
+      iU_1, iU_2, &
       Caret, &
       Dot, &
       Exponent_1, &
       Exponent_2, &
       Exponent
     character ( LDL ) :: &
+      U_1, &
+      U_2, &
       UnitBase_1, &
       UnitBase_2, &
       ExponentString
@@ -1225,9 +1241,28 @@ contains
     call Split ( Unit_1, ' ', UnitPiece_1 )
     call Split ( Unit_2, ' ', UnitPiece_2 )
     if ( size ( UnitPiece_1 ) > 1 .or. size ( UnitPiece_2 ) > 1 ) then
-      !-- Give up on this more complicated case
-      P_U = adjustl ( trim ( Unit_1 ) // ' ' // trim ( Unit_2 ) )
+      do iU_1 = 1, size ( UnitPiece_1 )
+        do iU_2 = 1, size ( UnitPiece_2 )
+          Caret = index ( UnitPiece_1 ( iU_1 ), '^' )
+          if ( Caret > 0 ) then
+            UnitBase_1 = UnitPiece_1 ( iU_1 ) ( : Caret - 1 )
+          else
+            UnitBase_1 = UnitPiece_1 ( iU_1 )
+          end if
+          if ( index ( UnitPiece_2 ( iU_2 ), trim ( UnitBase_1 ) ) > 0 ) then
+            UnitPiece_1 ( iU_1 ) &
+              = ProductUnit ( UnitPiece_1 ( iU_1 ), UnitPiece_2 ( iU_2 ) )
+            UnitPiece_2 ( iU_2 ) = ''
+          end if
+        end do !-- iU_2
+      end do !-- iU_1
+      call Join ( UnitPiece_1, ' ', U_1 )
+      call Join ( UnitPiece_2, ' ', U_2 )
+      P_U = adjustl ( trim ( U_1 ) // ' ' // trim ( U_2 ) )
       return
+    !   !-- Give up on this more complicated case
+    !   P_U = adjustl ( trim ( Unit_1 ) // ' ' // trim ( Unit_2 ) )
+    !   return
     end if
 
     !-- Analyze Unit_1

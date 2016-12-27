@@ -14,6 +14,8 @@ module DistributedMesh_Form
       nDimensions  = 0, &
       nProperCells = 0, &
       nGhostCells  = 0
+    integer ( KDI ), private :: &
+      iTimer_IO
     integer ( KDI ), dimension ( MAX_N_DIMENSIONS ) :: &
       iaBrick, &
       iaFirst, &
@@ -29,7 +31,7 @@ module DistributedMesh_Form
       MaxCoordinate, &
       CellWidth, &
       CellArea
-    type ( ArrayReal_1D_Form ), dimension ( MAX_N_DIMENSIONS ) :: &
+    type ( Real_1D_Form ), dimension ( MAX_N_DIMENSIONS ) :: &
       Edge
     type ( MeasuredValueForm ), dimension ( MAX_N_DIMENSIONS ) :: &
       CoordinateUnit
@@ -39,17 +41,17 @@ module DistributedMesh_Form
       Position
     type ( VariableGroupForm ), dimension ( : ), allocatable :: &
       ExchangeVariableGroup
-    type ( VariableGroupArrayMetadataForm ), allocatable :: &
-      VariablesMetadata
+    type ( VariableGroup_1D_Form ), allocatable :: &
+      VariableGroup
     type ( CommunicatorForm ), pointer :: &
       Communicator => null ( )
     type ( PortalHeaderForm ) :: &
       PortalHeaderPrevious, &
       PortalHeaderNext
-    type ( IncomingMessageArrayRealForm ), allocatable :: &
+    type ( MessageIncoming_1D_R_Form ), allocatable :: &
       IncomingPrevious, &
       IncomingNext
-    type ( OutgoingMessageArrayRealForm ), allocatable :: &
+    type ( MessageOutgoing_1D_R_Form ), allocatable :: &
       OutgoingPrevious, &
       OutgoingNext
     type ( GridImageStreamForm ) :: &
@@ -175,27 +177,27 @@ contains
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V  !-- Variable
 
-    allocate ( DM % VariablesMetadata )
+    allocate ( DM % VariableGroup )
     allocate ( DM % IncomingPrevious )
     allocate ( DM % IncomingNext )
     allocate ( DM % OutgoingPrevious )
     allocate ( DM % OutgoingNext )
 
     associate &
-      ( VM  => DM % VariablesMetadata, &
+      ( VG_1D  => DM % VariableGroup, &
         PHP => DM % PortalHeaderPrevious, &
         PHN => DM % PortalHeaderNext )
 
-    call VM % Initialize ( VG )
+    call VG_1D % Initialize ( VG )
 
     !-- Post Receives
 
     call DM % IncomingPrevious % Initialize &
            ( DM % Communicator, spread ( TAG_IN_PREV, 1, PHP % nSources ), &
-             PHP % Source, PHP % nChunksFrom * VM % nVariablesTotal )
+             PHP % Source, PHP % nChunksFrom * VG_1D % nVariablesTotal )
     call DM % IncomingNext % Initialize &
            ( DM % Communicator, spread ( TAG_IN_NEXT, 1, PHN % nSources ), &
-             PHN % Source, PHN % nChunksFrom * VM % nVariablesTotal )
+             PHN % Source, PHN % nChunksFrom * VG_1D % nVariablesTotal )
 
     call DM % IncomingPrevious % Receive ( )
     call DM % IncomingNext % Receive ( )
@@ -204,7 +206,7 @@ contains
 
     call DM % OutgoingPrevious % Initialize &
            ( DM % Communicator, spread ( TAG_OUT_PREV, 1, PHP % nTargets ), &
-             PHP % Target, PHP % nChunksTo * VM % nVariablesTotal )
+             PHP % Target, PHP % nChunksTo * VG_1D % nVariablesTotal )
 
     do iD = 1, DM % nDimensions
       jD = mod ( iD, 3 ) + 1
@@ -216,11 +218,11 @@ contains
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
 
-      do iG = 1, VM % nGroups
-        do iS = 1, VM % nVariables ( iG )          
-          iV = VM % VariableGroup ( iG ) % Selected ( iS )
+      do iG = 1, VG_1D % nGroups
+        do iS = 1, VG_1D % nVariables ( iG )          
+          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VM % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
           call Copy ( V, nSend, oSend, oBuffer, &
                       DM % OutgoingPrevious % Message ( iD ) % Value )
           oBuffer = oBuffer + product ( nSend )
@@ -235,7 +237,7 @@ contains
 
     call DM % OutgoingNext % Initialize &
            ( DM % Communicator, spread ( TAG_OUT_NEXT, 1, PHN % nTargets ), &
-             PHN % Target, PHN % nChunksTo * VM % nVariablesTotal )
+             PHN % Target, PHN % nChunksTo * VG_1D % nVariablesTotal )
 
     do iD = 1, DM % nDimensions
       jD = mod ( iD, 3 ) + 1
@@ -249,11 +251,11 @@ contains
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
 
-      do iG = 1, VM % nGroups
-        do iS = 1, VM % nVariables ( iG )          
-          iV = VM % VariableGroup ( iG ) % Selected ( iS )
+      do iG = 1, VG_1D % nGroups
+        do iS = 1, VG_1D % nVariables ( iG )          
+          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VM % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
           call Copy ( V, nSend, oSend, oBuffer, &
                       DM % OutgoingNext % Message ( iD ) % Value )
           oBuffer = oBuffer + product ( nSend )
@@ -265,7 +267,7 @@ contains
     end do !-- iD
 
     nullify ( V )
-    end associate !-- VM, etc.
+    end associate !-- VG_1D, etc.
 
   end subroutine StartGhostExchangeMultiple
 
@@ -287,7 +289,7 @@ contains
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V  !-- Variable
 
-    associate ( VM  => DM % VariablesMetadata )
+    associate ( VG_1D  => DM % VariableGroup )
 
     !-- Receive from Next
 
@@ -304,11 +306,11 @@ contains
 
       call DM % IncomingNext % Wait ( iD )
 
-      do iG = 1, VM % nGroups
-        do iS = 1, VM % nVariables ( iG )          
-          iV = VM % VariableGroup ( iG ) % Selected ( iS )
+      do iG = 1, VG_1D % nGroups
+        do iS = 1, VG_1D % nVariables ( iG )          
+          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VM % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
           call Copy ( DM % IncomingNext % Message ( iD ) % Value, &
                       nReceive, oReceive, oBuffer, V )
           oBuffer = oBuffer + product ( nReceive )
@@ -332,11 +334,11 @@ contains
 
       call DM % IncomingPrevious % Wait ( iD )
 
-      do iG = 1, VM % nGroups
-        do iS = 1, VM % nVariables ( iG )          
-          iV = VM % VariableGroup ( iG ) % Selected ( iS )
+      do iG = 1, VG_1D % nGroups
+        do iS = 1, VG_1D % nVariables ( iG )          
+          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VM % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
           call Copy ( DM % IncomingPrevious % Message ( iD ) % Value, &
                       nReceive, oReceive, oBuffer, V )
           oBuffer = oBuffer + product ( nReceive )
@@ -351,13 +353,13 @@ contains
     call DM % OutgoingNext % Wait ( )
 
     nullify ( V )
-    end associate !-- VM
+    end associate !-- VG_1D
 
     deallocate ( DM % OutgoingNext )
     deallocate ( DM % OutgoingPrevious )
     deallocate ( DM % IncomingNext )
     deallocate ( DM % IncomingPrevious )
-    deallocate ( DM % VariablesMetadata )
+    deallocate ( DM % VariableGroup )
 
     if ( allocated ( DM % ExchangeVariableGroup ) ) &
       deallocate ( DM % ExchangeVariableGroup )
@@ -375,12 +377,25 @@ contains
       Name
 
     integer ( KDI ) :: &
-      iVG  !-- iVariableGroup
+      iD, &  !-- iDimension
+      iVG    !-- iVariableGroup
+    integer ( KDI ), dimension ( MAX_N_DIMENSIONS ) :: &
+      nCells, &
+      nGhostInner, &
+      nGhostOuter, &
+      nExteriorInner, &
+      nExteriorOuter
+    type ( Real_1D_Form ), dimension ( MAX_N_DIMENSIONS ) :: &
+      Edge
     character ( LDF ) :: &
       OutputDirectory
 
     OutputDirectory = '../Output/'
-    call PROGRAM_HEADER % GetParameter ( OutputDirectory, 'OutputDirectory' )    
+    call PROGRAM_HEADER % GetParameter ( OutputDirectory, 'OutputDirectory' )
+    
+    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DM % iTimer_IO )
+    
+    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Start ( )
 
     associate ( GIS => DM % GridImageStream )
     call GIS % Initialize &
@@ -388,14 +403,36 @@ contains
              WorkingDirectoryOption = OutputDirectory )
     call GIS % Open ( GIS % ACCESS_SET_GRID )
 
+    nGhostInner = DM % nGhostLayers
+    nGhostOuter = DM % nGhostLayers
+    nExteriorInner = 0
+    nExteriorOuter = 0
+    where ( DM % iaBrick == 1 )
+      nGhostInner = 0
+      nExteriorInner = DM % nGhostLayers
+    end where
+    where ( DM % iaBrick == DM % nBricks )
+      nGhostOuter = 0
+      nExteriorOuter = DM % nGhostLayers
+    end where
+
+    nCells = DM % iaLast - ( DM % iaFirst - 1 ) &
+             - nExteriorInner - nExteriorOuter
+
+    !-- shift lbound of Edge to 1
+    do iD = 1, DM % nDimensions
+      call Edge ( iD ) % Initialize ( size ( DM % Edge ( iD ) % Value ) )
+      Edge ( iD ) % Value = DM % Edge ( iD ) % Value 
+    end do !-- iD
+    
     select case ( DM % nDimensions )
     case ( 1 ) 
 
       associate ( CI => DM % CurveImage )
       call CI % Initialize ( GIS )
       call CI % SetGrid &
-             ( 'Curves', DM % Edge ( 1 ), DM % nProperCells, &
-               oValue = DM % nGhostLayers ( 1 ), &
+             ( 'Curves', Edge ( 1 ), DM % nProperCells, &
+               oValue = nGhostInner ( 1 ) + nExteriorInner ( 1 ), &
                CoordinateUnitOption = DM % CoordinateUnit ( 1 ) )
       do iVG = 1, size ( VG )
         call CI % AddVariableGroup ( VG ( iVG ) )
@@ -407,9 +444,9 @@ contains
       associate ( GI => DM % GridImage )
       call GI % Initialize ( GIS ) 
       call GI % SetGrid &
-             ( 'Grid', DM % Edge, DM % iaLast - ( DM % iaFirst - 1 ), &
-               DM % nDimensions, DM % nProperCells, DM % nGhostCells, &
-               DM % nGhostLayers ( 1 ), &
+             ( 'Grid', Edge, nCells, nGhostInner, nGhostOuter, &
+               nExteriorInner, nExteriorOuter, DM % nDimensions, &
+               DM % nProperCells, DM % nGhostCells, &
                CoordinateUnitOption = DM % CoordinateUnit )
       do iVG = 1, size ( VG )
         call GI % AddVariableGroup ( VG ( iVG ) )
@@ -421,6 +458,8 @@ contains
     call GIS % Close ( )
 
     end associate !-- GIS
+    
+    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Stop ( )
 
   end subroutine SetImage
 
@@ -433,13 +472,9 @@ contains
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
-      
-    type ( MeasuredValueForm ) :: &
-      StartWallTime, &
-      FinishWallTime
+          
+    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Start ( )
     
-    StartWallTime = WallTime ( )
-     
     associate ( GIS => DM % GridImageStream )
     call GIS % Open ( GIS % ACCESS_CREATE )
 
@@ -455,12 +490,8 @@ contains
     call GIS % Close ( )
     end associate !-- GIS
     
-    FinishWallTime = WallTime ( )
+    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Stop ( )
     
-    PROGRAM_HEADER % InputOutputWallTime &
-      = PROGRAM_HEADER % InputOutputWallTime &
-          + ( FinishWallTime - StartWallTime )
-
   end subroutine Write
 
 
@@ -660,7 +691,7 @@ contains
       iE, &  !-- iEdge
       iE_1, iE_2, &  !-- indices of first and last edge values
       oE  !-- oEdge (offset)
-    type ( ArrayReal_1D_Form ), dimension ( MAX_N_DIMENSIONS ) :: &
+    type ( Real_1D_Form ), dimension ( MAX_N_DIMENSIONS ) :: &
       GlobalEdge
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       Center

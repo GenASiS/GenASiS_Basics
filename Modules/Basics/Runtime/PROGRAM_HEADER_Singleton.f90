@@ -3,48 +3,38 @@
 !   program parameters, and displaying basic runtime statistics.
 
 module PROGRAM_HEADER_Singleton
-  
+
+  use OMP_LIB
   use VariableManagement
   use Display
   use MessagePassing
   use FileSystem
-  use WallTime_Function
+  use Timer_Form
   use GetMemoryUsage_Command
   use CommandLineOptions_Form
-!  use petsc
+  !  use petsc
 
   implicit none
   private
-  
+
+    integer ( KDI ), private, parameter :: &
+      MAX_TIMERS = 32
+
   type, public :: ProgramHeaderSingleton
     integer ( KDI ) :: &
-      nThreads = 1
-    type ( MeasuredValueForm )  :: &
-      WallTime, &
-      WallTimeStart, &
-      InputOutputWallTime, &
-      ComputationalWallTime, &
-      HighWaterMark, &
-      MaxHighWaterMark, &
-      MinHighWaterMark, &
-      MeanHighWaterMark, &
-      ResidentSetSize, &
-      MaxResidentSetSize, &
-      MinResidentSetSize, &
-      MeanResidentSetSize
-    type ( MeasuredValueForm ), private :: &
-      OldHighWaterMark, &
-      OldMeanHighWaterMark, &
-      OldResidentSetSize, &
-      OldMeanResidentSetSize
+      nTimers = 0, &
+      MaxThreads = 0, &
+      ExecutionTimeHandle
     character ( LDL ) :: &
       Dimensionality = ''
     character ( LDF ) :: &
       Name
     type ( CommunicatorForm ), allocatable :: &
       Communicator 
-    type ( ParametersStreamForm ), allocatable :: &
-      ParametersStream 
+    type ( ParameterStreamForm ), allocatable :: &
+      ParameterStream
+    type ( TimerForm ), dimension ( : ), allocatable :: &
+      Timer
     type ( CommandLineOptionsForm ), allocatable :: &
       CommandLineOptions
   contains
@@ -79,6 +69,8 @@ module PROGRAM_HEADER_Singleton
            GetParameter_1D_MeasuredValue, GetParameter_1D_Logical, &
            GetParameter_1D_Character
     procedure, public, nopass :: &
+      AddTimer
+    procedure, public, nopass :: &
       ShowStatistics
     procedure, public, nopass :: &
       Abort => Abort_PH  !-- avoids conflict with intrinsic "abort"
@@ -88,19 +80,24 @@ module PROGRAM_HEADER_Singleton
   
   type ( ProgramHeaderSingleton ), public, target, allocatable :: &
     PROGRAM_HEADER
-    
+
+    private :: &
+      ReadTimers
+
 contains
 
  
-  subroutine Initialize ( Name, AppendDimensionalityOption ) 
+  subroutine Initialize &
+               ( Name, DimensionalityOption, AppendDimensionalityOption ) 
 
     character ( * ), intent ( in )  :: &
       Name
+    character ( * ), intent ( in ), optional :: &
+      DimensionalityOption
     logical ( KDL ), intent ( in ), optional :: &
       AppendDimensionalityOption
       
     integer ( KDI )  :: &
-      Error, &
       DisplayRank
     character ( LDL )  :: &
       Verbosity
@@ -120,35 +117,32 @@ contains
 
     PH => PROGRAM_HEADER 
       
-!    PH % nThreads = OMP_GET_MAX_THREADS ( )
-      
-    call PH % InputOutputWallTime % Initialize ( 's', 0.0_KDR )
-    call PH % ComputationalWallTime % Initialize ( 's', 0.0_KDR )
-
     allocate ( PH % Communicator )
     call PH % Communicator % Initialize ( )
-    
-    PH % WallTimeStart = WallTime ( ) 
     
     call UNIT % Initialize ( )
     
     Abort => Abort_PH
     call CONSOLE % Initialize ( PH % Communicator % Rank, AbortOption = Abort )
 
-    allocate ( PH % ParametersStream )
+    allocate ( PH % ParameterStream )
     allocate ( PH % CommandLineOptions )
     associate &
-      ( PS   => PH % ParametersStream, &
+      ( PS   => PH % ParameterStream, &
         CLO => PH % CommandLineOptions )
 
     call CLO % Initialize ( )
 
     if ( AppendDimensionality ) then
+      if ( present ( DimensionalityOption ) ) &
+        PH % Dimensionality = DimensionalityOption
       call CLO % Read &
              ( PH % Dimensionality, 'Dimensionality', &
                IgnorabilityOption = CONSOLE % INFO_1, &
                SuccessOption = DimensionalityFound )
-      if ( .not. DimensionalityFound ) then
+      if ( .not. present ( DimensionalityOption ) &
+           .and. .not. DimensionalityFound ) &
+      then
         PH % Dimensionality = '3D'
         call Show &
                ( 'Dimensionality not specified, defaulting to 3D', &
@@ -161,7 +155,7 @@ contains
     end if
 
     Filename = trim ( PH % Name ) // '_Program_Parameters'
-    call PH % ParametersStream % Initialize &
+    call PH % ParameterStream % Initialize &
            ( Filename, PH % Communicator % Rank )
 
     DisplayRank  = CONSOLE % DisplayRank
@@ -173,18 +167,19 @@ contains
     call PH % GetParameter ( Verbosity, 'Verbosity' )
     call CONSOLE % SetVerbosity ( Verbosity )
 
-    call GetMemoryUsage &
-           ( PH % Communicator, PH % OldHighWaterMark, &
-             PH % OldResidentSetSize, &
-             Mean_HWM_Option = PH % OldMeanHighWaterMark, &
-             Mean_RSS_Option = PH % OldMeanResidentSetSize )
-             
+    PH % MaxThreads = OMP_GET_MAX_THREADS ( )
+    call Show ( PH % MaxThreads, 'MaxThreads', CONSOLE % INFO_1 )
+    
+    allocate ( PH % Timer ( MAX_TIMERS ) )
+    call PH % AddTimer ( 'Execution', PH % ExecutionTimeHandle )
+    call PH % Timer ( PH % ExecutionTimeHandle ) % Start ( )
+    
 !    call Show ( 'Initializing PETSc', CONSOLE % INFO_1)
 !    call PETSCINITIALIZE ( PETSC_NULL_CHARACTER, Error )
 
     call Show ( 'Starting the Program', CONSOLE % INFO_1 ) 
     call Show ( PH % Name, 'Name', CONSOLE % INFO_1 ) 
-!    call Show ( PH % nThreads, 'nThreads', CONSOLE % INFO_1 )
+    call Show ( PH % MaxThreads, 'MaxThreads', CONSOLE % INFO_1 )
 
     end associate  !-- P, CLO 
 
@@ -195,15 +190,15 @@ contains
   
   
   subroutine GetParameter_0D_Integer &
-               ( Value, Name, ParametersStreamOption, IgnorabilityOption, &
+               ( Value, Name, ParameterStreamOption, IgnorabilityOption, &
                  SuccessOption )
 
     integer ( KDI ), intent ( inout ) :: &
       Value
     character ( * ), intent ( in ) :: &
       Name
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -214,16 +209,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -249,7 +244,7 @@ contains
 
 
   subroutine GetParameter_0D_Real &
-               ( Value, Name, InputUnitOption, ParametersStreamOption, &
+               ( Value, Name, InputUnitOption, ParameterStreamOption, &
                  IgnorabilityOption, SuccessOption )
 
     real ( KDR ), intent ( inout ) :: &
@@ -258,8 +253,8 @@ contains
       Name
     type ( MeasuredValueForm ), intent ( inout ), optional :: &
       InputUnitOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -270,16 +265,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -307,7 +302,7 @@ contains
 
 
   subroutine GetParameter_0D_MeasuredValue &
-               ( Value, Name, InputUnitOption, ParametersStreamOption, &
+               ( Value, Name, InputUnitOption, ParameterStreamOption, &
                  IgnorabilityOption, ConvertOption, SuccessOption )
 
     type ( MeasuredValueForm ), intent ( inout ) :: &
@@ -316,8 +311,8 @@ contains
       Name
     type ( MeasuredValueForm ), intent ( inout ), optional :: &
       InputUnitOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( in ), optional :: &
@@ -330,16 +325,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -367,15 +362,15 @@ contains
 
 
   subroutine GetParameter_0D_Logical &
-               ( Value, Name, ParametersStreamOption, IgnorabilityOption, &
+               ( Value, Name, ParameterStreamOption, IgnorabilityOption, &
                  SuccessOption )
 
     logical ( KDL ), intent ( inout ) :: &
       Value
     character ( * ), intent ( in ) :: &
       Name
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -386,16 +381,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -421,15 +416,15 @@ contains
 
 
   subroutine GetParameter_0D_Character &
-               ( Value, Name, ParametersStreamOption, IgnorabilityOption, &
+               ( Value, Name, ParameterStreamOption, IgnorabilityOption, &
                  SuccessOption )
 
     character ( * ), intent ( inout ) :: &
       Value
     character ( * ), intent ( in ) :: &
       Name
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -440,16 +435,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -475,7 +470,7 @@ contains
 
 
   subroutine GetParameter_1D_Integer &
-               ( Value, Name, nValuesOption, ParametersStreamOption, &
+               ( Value, Name, nValuesOption, ParameterStreamOption, &
                  IgnorabilityOption, SuccessOption )
 
     integer ( KDI ), dimension ( : ), intent ( inout ) :: &
@@ -484,8 +479,8 @@ contains
       Name
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -496,16 +491,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -532,7 +527,7 @@ contains
 
   subroutine GetParameter_1D_Real &
                ( Value, Name, InputUnitOption, nValuesOption, &
-                 ParametersStreamOption, IgnorabilityOption, SuccessOption )
+                 ParameterStreamOption, IgnorabilityOption, SuccessOption )
 
     real ( KDR ), dimension ( : ), intent ( inout ) :: &
       Value
@@ -542,8 +537,8 @@ contains
       InputUnitOption
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -554,16 +549,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -592,7 +587,7 @@ contains
 
   subroutine GetParameter_1D_MeasuredValue &
                ( Value, Name, InputUnitOption, nValuesOption, &
-                 ParametersStreamOption, IgnorabilityOption, SuccessOption )
+                 ParameterStreamOption, IgnorabilityOption, SuccessOption )
 
     type ( MeasuredValueForm ), dimension ( : ), intent ( inout ) :: &
       Value
@@ -602,8 +597,8 @@ contains
       InputUnitOption
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -614,16 +609,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -651,7 +646,7 @@ contains
 
 
   subroutine GetParameter_1D_Logical &
-               ( Value, Name, nValuesOption, ParametersStreamOption, &
+               ( Value, Name, nValuesOption, ParameterStreamOption, &
                  IgnorabilityOption, SuccessOption )
 
     logical ( KDL ), dimension ( : ), intent ( inout ) :: &
@@ -660,8 +655,8 @@ contains
       Name
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -672,16 +667,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -707,7 +702,7 @@ contains
 
 
   subroutine GetParameter_1D_Character &
-               ( Value, Name, nValuesOption, ParametersStreamOption, &
+               ( Value, Name, nValuesOption, ParameterStreamOption, &
                  IgnorabilityOption, SuccessOption )
 
     character ( * ), dimension ( : ), intent ( inout ) :: &
@@ -716,8 +711,8 @@ contains
       Name
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
-    type ( ParametersStreamForm ), intent ( in ), target, optional :: &
-      ParametersStreamOption
+    type ( ParameterStreamForm ), intent ( in ), target, optional :: &
+      ParameterStreamOption
     integer ( KDI ), intent ( in ), optional :: &
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
@@ -728,16 +723,16 @@ contains
     logical ( KDL ) :: &
       Success_PS, &
       Success_CLO
-    type ( ParametersStreamForm ), pointer :: &
+    type ( ParameterStreamForm ), pointer :: &
       PS
 
     Ignorability = CONSOLE % INFO_3
     if ( present ( IgnorabilityOption ) ) Ignorability = IgnorabilityOption
 
-    if ( present ( ParametersStreamOption ) ) then
-      PS => ParametersStreamOption
+    if ( present ( ParameterStreamOption ) ) then
+      PS => ParameterStreamOption
     else
-      PS => PROGRAM_HEADER % ParametersStream
+      PS => PROGRAM_HEADER % ParameterStream
     end if
 
     associate ( CLO => PROGRAM_HEADER % CommandLineOptions )
@@ -762,94 +757,101 @@ contains
   end subroutine GetParameter_1D_Character
 
 
-  subroutine ShowStatistics ( Verbosity, AcrossProcessesOption )
+  subroutine AddTimer ( Name, Handle )
+
+    character ( * ), intent ( in ) :: &
+      Name
+    integer ( KDI ), intent ( out ) :: &
+      Handle
+
+    type ( ProgramHeaderSingleton ), pointer :: &
+      PH
+    
+    PH => PROGRAM_HEADER 
+      
+    PH % nTimers = PH % nTimers + 1
+    Handle = PH % nTimers
+
+    call PH % Timer ( Handle ) % Initialize ( Name )
+
+    call Show ( 'Adding a Timer', CONSOLE % INFO_1 )
+    call Show ( PH % Timer ( Handle ) % Name, 'Name' )
+
+  end subroutine AddTimer
+
+
+  subroutine ShowStatistics &
+               ( Verbosity, CommunicatorOption, MaxTimeOption, MinTimeOption, &
+                 MeanTimeOption )
   
     integer ( KDI ), intent ( in ) :: &
       Verbosity
-    logical ( KDL ), intent ( in ), optional :: &
-      AcrossProcessesOption
+    type ( CommunicatorForm ), intent ( in ), optional :: &
+      CommunicatorOption
+    real ( KDR ), dimension ( : ), intent ( out ), optional :: &
+      MaxTimeOption, &
+      MinTimeOption, &
+      MeanTimeOption
       
-    logical ( KDL ) :: &
-      AcrossProcesses
+    type ( MeasuredValueForm )  :: &
+      HighWaterMark, &
+      MaxHighWaterMark, &
+      MinHighWaterMark, &
+      MeanHighWaterMark, &
+      ResidentSetSize, &
+      MaxResidentSetSize, &
+      MinResidentSetSize, &
+      MeanResidentSetSize
     type ( ProgramHeaderSingleton ), pointer :: &
       PH
       
+    if ( Verbosity > CONSOLE % Verbosity ) return
+
     PH => PROGRAM_HEADER 
       
-    AcrossProcesses = .false.
-    if ( present ( AcrossProcessesOption ) ) &
-      AcrossProcesses = AcrossProcessesOption
-      
-    PH % WallTime = WallTime ( )
+    call Show ( 'Runtime statistics', Verbosity )
+
+    call ReadTimers &
+           ( Verbosity, CommunicatorOption, MaxTimeOption, MinTimeOption, &
+             MeanTimeOption )
+
+    call Show ( 'Program memory usage', Verbosity )
     
-    if ( AcrossProcesses ) then
+    if ( present ( CommunicatorOption ) ) then
       call GetMemoryUsage &
-             ( PH % Communicator, PH % HighWaterMark, PH % ResidentSetSize, &
-               Max_HWM_Option = PH % MaxHighWaterMark, &
-               Min_HWM_Option = PH % MinHighWaterMark, &
-               Mean_HWM_Option = PH % MeanHighWaterMark, &
-               Max_RSS_Option = PH % MaxResidentSetSize, &
-               Min_RSS_Option = PH % MinResidentSetSize, &
-               Mean_RSS_Option = PH % MeanResidentSetSize )
+             ( HighWaterMark, ResidentSetSize, CommunicatorOption, &
+               Max_HWM_Option  = MaxHighWaterMark, &
+               Min_HWM_Option  = MinHighWaterMark, &
+               Mean_HWM_Option = MeanHighWaterMark, &
+               Max_RSS_Option  = MaxResidentSetSize, &
+               Min_RSS_Option  = MinResidentSetSize, &
+               Mean_RSS_Option = MeanResidentSetSize )
     else
       call GetMemoryUsage &
-             ( PH % Communicator, PH % HighWaterMark, PH % ResidentSetSize )
+             ( HighWaterMark, ResidentSetSize )
     end if
     
-    call Show ( 'Runtime statistic', Verbosity )
+    call Show ( HighWaterMark, 'This process HWM', Verbosity )
+    call Show ( ResidentSetSize, 'This process RSS', Verbosity )
     
-    call Show &
-           ( PH % WallTime - PH % WallTimeStart, 'Elapsed wall time', &
-             Verbosity )
-    call Show &
-           ( PH % ComputationalWallTime, 'Computational wall time', &
-             Verbosity )
-    call Show &
-           ( PH % InputOutputWallTime, 'Input/output wall time', &
-             Verbosity )
-    
-    call Show ( PH % HighWaterMark, 'This process HWM', Verbosity )
-    call Show &
-           ( PH % HighWaterMark - PH % OldHighWaterMark, &
-             'This process HWM increase' , Verbosity )
-    call Show ( PH % ResidentSetSize, 'This process RSS', Verbosity )
-    call Show &
-           ( PH % ResidentSetSize - PH % OldResidentSetSize, &
-             'This process RSS increase', Verbosity )
-    
-    if ( AcrossProcesses ) then
+    if ( present ( CommunicatorOption ) ) then
       
-      call Show &
-             ( PH % MaxHighWaterMark, 'Across processes max HWM', Verbosity )
-      call Show &
-             ( PH % MinHighWaterMark, 'Across processes min HWM', Verbosity )
-      call Show &
-             ( PH % MeanHighWaterMark, 'Across processes mean HWM', Verbosity )
-      call Show &
-             ( PH % MeanHighWaterMark - PH % OldMeanHighWaterMark, &
-               'Across processes mean HWM increase', Verbosity )
+      call Show ( MaxHighWaterMark, 'Across processes max HWM', &
+                  Verbosity )
+      call Show ( MinHighWaterMark, 'Across processes min HWM', &
+                  Verbosity )
+      call Show ( MeanHighWaterMark, 'Across processes mean HWM', &
+                  Verbosity )
       
-      call Show &
-             ( PH % MaxResidentSetSize, 'Across processes max RSS', Verbosity )
-      call Show &
-             ( PH % MinResidentSetSize, 'Across processes min RSS', Verbosity )
-      call Show &
-             ( PH % MeanResidentSetSize, 'Across processes mean RSS', &
-               Verbosity )
-      call Show &
-             ( PH % MeanResidentSetSize - PH % OldMeanResidentSetSize, &
-               'Across processes mean RSS increase', Verbosity )
+      call Show ( MaxResidentSetSize, 'Across processes max RSS', &
+                  Verbosity )
+      call Show ( MinResidentSetSize, 'Across processes min RSS', &
+                  Verbosity )
+      call Show ( MeanResidentSetSize, 'Across processes mean RSS', &
+                  Verbosity )
     
     end if
     
-    PH % OldHighWaterMark   = PH % HighWaterMark
-    PH % OldResidentSetSize = PH % ResidentSetSize
-    
-    if ( AcrossProcesses ) then
-      PH % OldMeanHighWaterMark   = PH % MeanHighWaterMark
-      PH % OldMeanResidentSetSize = PH % MeanResidentSetSize
-    end if
-  
     nullify ( PH )
 
   end subroutine ShowStatistics 
@@ -866,13 +868,10 @@ contains
   end subroutine Abort_PH
 
 
-  subroutine Finalize ( PH ) 
+  impure elemental subroutine Finalize ( PH ) 
 
     type ( ProgramHeaderSingleton ), intent ( inout ) :: &
       PH
-    
-    integer ( KDI )  :: &
-      Error
     
     call Show ( 'Finishing the Program', CONSOLE % INFO_1 ) 
     call Show ( PH % Name, 'Name', CONSOLE % INFO_1 )
@@ -881,18 +880,115 @@ contains
 !    call PETSCFINALIZE ( Error )
     
     call PH % ShowStatistics &
-           ( CONSOLE % INFO_1, AcrossProcessesOption = .true. )
+           ( CONSOLE % INFO_1, &
+             CommunicatorOption = PROGRAM_HEADER % Communicator )
 
     if ( allocated ( PH % CommandLineOptions ) ) &
       deallocate ( PH % CommandLineOptions ) 
-
-    if ( allocated ( PH % ParametersStream ) ) &
-      deallocate ( PH % ParametersStream )
-
+    if ( allocated ( PH % Timer ) ) &
+      deallocate ( PH % Timer )
+    if ( allocated ( PH % ParameterStream ) ) &
+      deallocate ( PH % ParameterStream )
     if ( allocated ( PH % Communicator ) ) &
       deallocate ( PH % Communicator )
 
   end subroutine Finalize
   
-  
+
+  subroutine ReadTimers &
+               ( Verbosity, CommunicatorOption, MaxTimeOption, MinTimeOption, &
+                 MeanTimeOption )
+
+    integer ( KDI ), intent ( in ) :: &
+      Verbosity
+    type ( CommunicatorForm ), intent ( in ), optional :: &
+      CommunicatorOption
+    real ( KDR ), dimension ( : ), intent ( out ), optional :: &
+      MaxTimeOption, &
+      MinTimeOption, &
+      MeanTimeOption
+      
+    integer ( KDI ) :: &
+      iT
+    logical ( KDL ), dimension ( MAX_TIMERS ) :: &
+      Running
+    type ( CollectiveOperation_R_Form ) :: &
+      CO
+    type ( TimerForm ), dimension ( MAX_TIMERS ) :: &
+      MaxTimer, &
+      MinTimer, &
+      MeanTimer
+    type ( ProgramHeaderSingleton ), pointer :: &
+      PH
+   
+    PH => PROGRAM_HEADER 
+
+    call Show ( 'Running timer intervals', Verbosity )
+    Running = .false.
+    do iT = 1, PH % nTimers
+      if ( PH % Timer ( iT ) % Running ) then
+        Running ( iT ) = .true.
+        call PH % Timer ( iT ) % Stop ( )
+        call PH % Timer ( iT ) % ShowInterval ( Verbosity )
+      end if
+    end do
+
+    call Show ( 'This process timers', Verbosity )
+    do iT = 1, PH % nTimers
+      call PH % Timer ( iT ) % ShowTotal ( Verbosity )
+    end do !-- iT
+
+    if ( present ( CommunicatorOption ) ) then
+
+      call CO % Initialize &
+             ( CommunicatorOption, &
+               nOutgoing = [ PH % nTimers ], nIncoming = [ PH % nTimers ], &
+               RootOption = CONSOLE % DisplayRank )
+
+      do iT = 1, PH % nTimers
+        call MaxTimer ( iT ) % Initialize ( PH % Timer ( iT ) % Name )
+        call MinTimer ( iT ) % Initialize ( PH % Timer ( iT ) % Name )
+        call MeanTimer ( iT ) % Initialize ( PH % Timer ( iT ) % Name )
+        CO % Outgoing % Value ( iT ) = PH % Timer ( iT ) % TotalTime
+      end do !-- iT
+
+      call Show ( 'Max timers', Verbosity )
+      call CO % Reduce ( REDUCTION % MAX )
+      do iT = 1, PH % nTimers
+        call MaxTimer ( iT ) % TotalTime % Initialize &
+               ( 's', CO % Incoming % Value ( iT ) )
+        call MaxTimer ( iT ) % ShowTotal ( Verbosity )
+        if ( present ( MaxTimeOption ) ) &
+          MaxTimeOption ( iT ) = MaxTimer ( iT ) % TotalTime
+      end do !-- iT
+      
+      call Show ( 'Min timers', Verbosity )
+      call CO % Reduce ( REDUCTION % MIN )
+      do iT = 1, PH % nTimers
+        call MinTimer ( iT ) % TotalTime % Initialize &
+               ( 's', CO % Incoming % Value ( iT ) )
+        call MinTimer ( iT ) % ShowTotal ( Verbosity )
+        if ( present ( MinTimeOption ) ) &
+          MinTimeOption ( iT ) = MinTimer ( iT ) % TotalTime
+      end do !-- iT
+      
+      call Show ( 'Mean timers', Verbosity )
+      call CO % Reduce ( REDUCTION % SUM )
+      do iT = 1, PH % nTimers
+        call MeanTimer ( iT ) % TotalTime % Initialize &
+               ( 's', CO % Incoming % Value ( iT ) / CommunicatorOption % Size )
+        call MeanTimer ( iT ) % ShowTotal ( Verbosity )
+        if ( present ( MeanTimeOption ) ) &
+          MeanTimeOption ( iT ) = MeanTimer ( iT ) % TotalTime
+      end do !-- iT
+      
+    end if !-- present ( CommunicatorOption )
+
+    do iT = 1, PH % nTimers
+      if ( Running ( iT ) ) call PH % Timer ( iT ) % Start ( )
+    end do
+
+  end subroutine ReadTimers
+
+
 end module PROGRAM_HEADER_Singleton

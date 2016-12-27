@@ -3,99 +3,99 @@ PATH_GENASIS = ../../../../../..
 include $(PATH_GENASIS)/Build/Makefile_Build
 
 all: \
-  ArrayInteger_1D__Form_Test ArrayInteger_2D__Form_Test \
-  ArrayInteger_3D__Form_Test ArrayReal_1D__Form_Test \
-  ArrayReal_2D__Form_Test ArrayReal_3D__Form_Test ArrayCharacter_1D__Form_Test
+  Integer_1D__Form_Test Integer_2D__Form_Test \
+  Integer_3D__Form_Test Real_1D__Form_Test \
+  Real_2D__Form_Test Real_3D__Form_Test Character_1D__Form_Test
 
-ArrayInteger_1D__Form_Test: ArrayInteger_1D__Form_Test.o
+Integer_1D__Form_Test: Specifiers.a ArrayOperations.a Integer_1D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayInteger_1D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
-          ArrayInteger_1D__Form.o ArrayInteger_1D__Form_Test.o $(LIBRARIES)
+          -o Integer_1D__Form_Test_$(MACHINE) \
+          Integer_1D__Form_Test.o Integer_1D__Form.o \
+          ArrayOperations.a Specifiers.a 
 
-ArrayInteger_2D__Form_Test: ArrayInteger_2D__Form_Test.o
+Integer_2D__Form_Test: Specifiers.a ArrayOperations.a Integer_2D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayInteger_2D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
-          ArrayInteger_2D__Form.o ArrayInteger_2D__Form_Test.o $(LIBRARIES)
+          -o Integer_2D__Form_Test_$(MACHINE) \
+          Integer_2D__Form_Test.o Integer_2D__Form.o \
+          ArrayOperations.a Specifiers.a 
 
-ArrayInteger_3D__Form_Test: ArrayInteger_3D__Form_Test.o
+Integer_3D__Form_Test: Specifiers.a ArrayOperations.a Integer_3D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayInteger_3D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
-          ArrayInteger_3D__Form.o ArrayInteger_3D__Form_Test.o $(LIBRARIES)
+          -o Integer_3D__Form_Test_$(MACHINE) \
+          Integer_3D__Form_Test.o Integer_3D__Form.o \
+          ArrayOperations.a Specifiers.a 
 
-ArrayReal_1D__Form_Test: ArrayReal_1D__Form_Test.o
+Real_1D__Form_Test: Specifiers.a ArrayOperations.a Real_1D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayReal_1D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
-          ArrayReal_1D__Form.o ArrayReal_1D__Form_Test.o $(LIBRARIES)
+          -o Real_1D__Form_Test_$(MACHINE) \
+          Real_1D__Form_Test.o Real_1D__Form.o \
+          ArrayOperations.a Specifiers.a 
 
-ArrayReal_2D__Form_Test: ArrayReal_2D__Form_Test.o
+Real_2D__Form_Test: Specifiers.a ArrayOperations.a Real_2D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayReal_2D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
-          ArrayReal_2D__Form.o ArrayReal_2D__Form_Test.o $(LIBRARIES)
+          -o Real_2D__Form_Test_$(MACHINE) \
+          Real_2D__Form_Test.o Real_2D__Form.o \
+          ArrayOperations.a Specifiers.a 
 
-ArrayReal_3D__Form_Test: ArrayReal_3D__Form_Test.o
+Real_3D__Form_Test: Specifiers.a ArrayOperations.a Real_3D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayReal_3D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) $(ARRAY_OPERATIONS) \
-          ArrayReal_3D__Form.o ArrayReal_3D__Form_Test.o $(LIBRARIES)
+          -o Real_3D__Form_Test_$(MACHINE) \
+          Real_3D__Form_Test.o Real_3D__Form.o \
+          ArrayOperations.a Specifiers.a 
 
-ArrayCharacter_1D__Form_Test: ArrayCharacter_1D__Form_Test.o
+Character_1D__Form_Test: Specifiers.a Character_1D__Form_Test.o
 	$(LINK) $(FLAGS) \
-          -o ArrayCharacter_1D__Form_Test_$(MACHINE) \
-          $(SPECIFIERS) \
-          ArrayCharacter_1D__Form.o ArrayCharacter_1D__Form_Test.o $(LIBRARIES)
+          -o Character_1D__Form_Test_$(MACHINE) \
+          Character_1D__Form_Test.o Character_1D__Form.o \
+          Specifiers.a 
 
 clean:
-	rm -f *.o *.mod *.ld
+	rm -f *.o *.a *.mod *.ld
 
 clobber: clean
-	rm -f ArrayInteger_1D__Form_Test_*
-	rm -f ArrayInteger_2D__Form_Test_*
-	rm -f ArrayInteger_3D__Form_Test_*
-	rm -f ArrayReal_1D__Form_Test_*
-	rm -f ArrayReal_2D__Form_Test_*
-	rm -f ArrayReal_3D__Form_Test_*
-	rm -f ArrayCharacter_1D__Form_Test_*
+	rm -f Integer_1D__Form_Test_*
+	rm -f Integer_2D__Form_Test_*
+	rm -f Integer_3D__Form_Test_*
+	rm -f Real_1D__Form_Test_*
+	rm -f Real_2D__Form_Test_*
+	rm -f Real_3D__Form_Test_*
+	rm -f Character_1D__Form_Test_*
 
 include $(PATH_SPECIFIERS)/Makefile_Dependencies
 include $(PATH_ARRAY_OPERATIONS)/Makefile_Dependencies
 include $(PATH_ARRAY_ARRAYS)/Makefile_Dependencies
 
-ArrayInteger_1D__Form_Test.o: \
+Integer_1D__Form_Test.o: \
   Specifiers.o \
-  ArrayInteger_1D__Form.o \
-  ArrayInteger_1D__Form_Test.f90
+  Integer_1D__Form.o \
+  Integer_1D__Form_Test.f90
 
-ArrayInteger_2D__Form_Test.o: \
+Integer_2D__Form_Test.o: \
   Specifiers.o \
-  ArrayInteger_2D__Form.o \
-  ArrayInteger_2D__Form_Test.f90
+  Integer_2D__Form.o \
+  Integer_2D__Form_Test.f90
 
-ArrayInteger_3D__Form_Test.o: \
+Integer_3D__Form_Test.o: \
   Specifiers.o \
-  ArrayInteger_3D__Form.o \
-  ArrayInteger_3D__Form_Test.f90
+  Integer_3D__Form.o \
+  Integer_3D__Form_Test.f90
 
-ArrayReal_1D__Form_Test.o: \
+Real_1D__Form_Test.o: \
   Specifiers.o \
-  ArrayReal_1D__Form.o \
-  ArrayReal_1D__Form_Test.f90
+  Real_1D__Form.o \
+  Real_1D__Form_Test.f90
 
-ArrayReal_2D__Form_Test.o: \
+Real_2D__Form_Test.o: \
   Specifiers.o \
-  ArrayReal_2D__Form.o \
-  ArrayReal_2D__Form_Test.f90
+  Real_2D__Form.o \
+  Real_2D__Form_Test.f90
 
-ArrayReal_3D__Form_Test.o: \
+Real_3D__Form_Test.o: \
   Specifiers.o \
-  ArrayReal_3D__Form.o \
-  ArrayReal_3D__Form_Test.f90
+  Real_3D__Form.o \
+  Real_3D__Form_Test.f90
 
-ArrayCharacter_1D__Form_Test.o: \
+Character_1D__Form_Test.o: \
   Specifiers.o \
-  ArrayCharacter_1D__Form.o \
-  ArrayCharacter_1D__Form_Test.f90
+  Character_1D__Form.o \
+  Character_1D__Form_Test.f90

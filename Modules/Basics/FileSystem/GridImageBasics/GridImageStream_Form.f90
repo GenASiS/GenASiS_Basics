@@ -14,7 +14,7 @@ module GridImageStream_Form
   implicit none
   private 
   
-  include 'silo.inc'
+  include 'silo_f9x.inc'
   
   type, public, extends ( GridImageStreamTemplate ) :: GridImageStreamForm
     character ( LDL ) :: &
@@ -373,7 +373,7 @@ contains
     do iG = 1, size ( VG )
       call GIS % MakeDirectory ( VG ( iG ) % Name )
       do iS = 1, VG ( iG ) % nVariables
-        iVrbl = VG ( iG ) % Selected ( iS )
+        iVrbl = VG ( iG ) % iaSelected ( iS )
         Error = DBWRITE &
                   ( GIS % MeshBlockHandle, &
                     VG ( iG ) % Variable ( iVrbl ), & 
@@ -483,7 +483,7 @@ contains
   end subroutine Close
   
   
-  elemental subroutine Finalize ( GIS )
+  impure elemental subroutine Finalize ( GIS )
   
     type ( GridImageStreamForm ), intent ( inout ) :: &
       GIS
@@ -496,9 +496,11 @@ contains
       deallocate ( GIS % MeshBlocksPrefix )
     if ( allocated ( GIS % ContentList ) ) &
       deallocate ( GIS % ContentList )
-    
-    !call Show ( 'Finalizing a GridImageStream', GIS % IGNORABILITY )
-    !call Show ( GIS % Name, 'Name', GIS % IGNORABILITY )
+
+    if ( GIS % Name == '' ) return
+
+    call Show ( 'Finalizing a GridImageStream', GIS % IGNORABILITY )
+    call Show ( GIS % Name, 'Name', GIS % IGNORABILITY )
 
   end subroutine Finalize
   

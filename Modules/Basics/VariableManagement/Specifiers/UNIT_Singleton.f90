@@ -22,6 +22,8 @@ module UNIT_Singleton
       PARSEC, &
       GIGAPARSEC, &
       ANGSTROM
+    type ( MeasuredValueForm ) :: &  !-- Angle
+      RADIAN
     type ( MeasuredValueForm ) :: &  !-- Time
       SECOND, &
       MILLISECOND, &
@@ -43,9 +45,11 @@ module UNIT_Singleton
       ELECTRON_VOLT, &
       MEV
     type ( MeasuredValueForm ) :: &  !-- Force
-      NEWTON
+      NEWTON, &
+      DYNE
     type ( MeasuredValueForm ) :: &  !-- Pressure
-      PASCAL
+      PASCAL, &
+      BARYE
     type ( MeasuredValueForm ) :: &  !-- Temperature
       KELVIN
     type ( MeasuredValueForm ) :: &  !-- Magnetic current
@@ -57,6 +61,11 @@ module UNIT_Singleton
       NUMBER_DENSITY_ANGSTROM
     type ( MeasuredValueForm ) :: &  !-- Mass density
       MASS_DENSITY_CGS
+    type ( MeasuredValueForm ) :: &  !-- Energy/length conversion
+      HBAR_C
+    type ( MeasuredValueForm ) :: &  !-- Computer resources
+      KILOBYTE, &
+      WALL_TIME
   contains
     procedure, public, nopass :: &
       Initialize
@@ -89,6 +98,9 @@ contains
     call U % GIGAPARSEC % Initialize ( 1.0e+9_KDR * U % PARSEC, 'Gpc' )
     call U % ANGSTROM % Initialize  ( 1.0e-10_KDR * U % METER, 'A' )
     
+    !-- Angle
+    call U % RADIAN % Initialize ( UNIT % IDENTITY, 'rad' )
+
     !-- Time
     call U % SECOND % Initialize &
            ( C % SPEED_OF_LIGHT_MKS / C % SPEED_OF_LIGHT * U % METER, 's' )
@@ -124,9 +136,11 @@ contains
 
     !-- Force
     call U % NEWTON % Initialize ( U % JOULE / U % METER, 'N' )
+    call U % DYNE   % Initialize ( U % ERG / U % CENTIMETER, 'dyn' )
 
     !-- Pressure
     call U % PASCAL % Initialize ( U % NEWTON / U % METER ** 2, 'Pa' )
+    call U % BARYE  % Initialize ( U % DYNE / U % CENTIMETER ** 2, 'Ba' )
 
     !-- Temperature
     call U % KELVIN % Initialize &
@@ -150,6 +164,14 @@ contains
     !-- Mass density
     call U % MASS_DENSITY_CGS % Initialize &
            ( U % GRAM / U % CENTIMETER ** 3, 'g cm^-3' ) 
+
+    !-- Energy/length conversion
+    call U % HBAR_C % Initialize &
+           ( '(hBar_c)', 'm^2', C % PLANCK_REDUCED * C % SPEED_OF_LIGHT )  
+
+    !-- Computer resources
+    call U % KILOBYTE % Initialize ( 'kB', 'kB', 1.0_KDR )
+    call U % WALL_TIME % Initialize ( 's', 's', 1.0_KDR )
 
     end associate
 
@@ -178,6 +200,8 @@ contains
       Result = UNIT % GIGAPARSEC
     case ( 'ANGSTROM' )  
       Result = UNIT % ANGSTROM
+    case ( 'RADIAN' )
+      Result = UNIT % RADIAN
     case ( 'SECOND' )
       Result = UNIT % SECOND
     case ( 'MILLISECOND' ) 
@@ -210,8 +234,12 @@ contains
       Result = UNIT % MEV
     case ( 'NEWTON' )
       Result = UNIT % NEWTON
+    case ( 'DYNE' )
+      Result = UNIT % DYNE
     case ( 'PASCAL' )
       Result = UNIT % PASCAL
+    case ( 'BARYE' )
+      Result = UNIT % BARYE
     case ( 'KELVIN' )
       Result = UNIT % KELVIN
     case ( 'AMPERE' )
@@ -224,6 +252,12 @@ contains
       Result = UNIT % NUMBER_DENSITY_ANGSTROM
     case ( 'MASS_DENSITY_CGS' )
       Result = UNIT % MASS_DENSITY_CGS
+    case ( 'HBAR_C' )
+      Result = UNIT % HBAR_C
+    case ( 'KILOBYTE' )
+      Result = UNIT % KILOBYTE
+    case ( 'WALL_TIME' )
+      Result = UNIT % WALL_TIME
     case default
       Result % Number = 1.0_KDR
       Result % Unit   = 'Undefined'

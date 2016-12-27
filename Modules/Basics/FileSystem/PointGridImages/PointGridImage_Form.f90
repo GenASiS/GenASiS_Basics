@@ -11,7 +11,7 @@ module PointGridImage_Form
   implicit none 
   private
   
-  include 'silo.inc'
+  include 'silo_f9x.inc'
   
   type, public, extends ( GridImageSiloTemplate ) :: PointGridImageForm 
     integer ( KDI ) :: &
@@ -215,7 +215,7 @@ contains
   end subroutine Read
 
   
-  elemental subroutine Finalize ( PGI )
+  impure elemental subroutine Finalize ( PGI )
     
     type ( PointGridImageForm ), intent ( inout ) :: & 
       PGI 
@@ -435,7 +435,7 @@ contains
     
       do iS = 1, VG % nVariables
         
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
         
         call Show ( 'Writing a Variable (point)', CONSOLE % INFO_6 )
         call Show ( iS, 'iSelected', CONSOLE % INFO_6 )
@@ -575,7 +575,7 @@ contains
 
       do iS = 1, VG % nVariables
 
-        iVrbl = VG % Selected ( iS )
+        iVrbl = VG % iaSelected ( iS )
         VariableName = trim ( VG % Variable ( iVrbl ) ) // c_null_char
         
         DB_MV_Handle = DB_GetPointVariable ( DB_File, VariableName )

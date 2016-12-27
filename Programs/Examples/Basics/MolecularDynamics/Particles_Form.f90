@@ -31,7 +31,7 @@ contains
       LengthUnitOption, &
       TimeUnitOption
 
-    type ( ArrayInteger_1D_Form ), dimension ( 1 ) :: &
+    type ( Integer_1D_Form ), dimension ( 1 ) :: &
       VectorIndices
     type ( MeasuredValueForm ), dimension ( 9 ) :: &
       VariableUnit

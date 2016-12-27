@@ -3,11 +3,11 @@
 
 FORTRAN_COMPILE      = ftn -c
 FORTRAN_BOUND_CHECK  = -fbounds-check
-FORTRAN_DEBUG        = -g -ffpe-trap=invalid,zero,overflow -Wall
+FORTRAN_DEBUG        = -g -ffpe-trap=invalid,zero,overflow #-Wall
 FORTRAN_OPTIMIZE     = -O3
 FORTRAN_PROFILE      = 
 
-LINK = ftn
+LINK = ftn -fopenmp
 
 #-- Silo library may be  automatically included & linked by 
 #-- "module load silo" if provided, otherwise, manually put include and 

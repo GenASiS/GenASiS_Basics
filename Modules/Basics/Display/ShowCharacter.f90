@@ -1,8 +1,8 @@
 !-- This wrapper exists for use by CONSOLE_Singleton.
 
 subroutine ShowCharacter &
-             ( Character, Description, IgnorabilityOption, DisplayRankOption, &
-               nLeadingLinesOption, nTrailingLinesOption )
+             ( Character, Description, IgnorabilityOption, &
+               DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
 
     use VariableManagement
     use Show_Command
@@ -18,7 +18,7 @@ subroutine ShowCharacter &
       nLeadingLinesOption, &
       nTrailingLinesOption
 
-    call Show ( Character, Description, IgnorabilityOption, DisplayRankOption,&
-                nLeadingLinesOption, nTrailingLinesOption )
+    call Show ( Character, Description, IgnorabilityOption, &
+                DisplayRankOption, nLeadingLinesOption, nTrailingLinesOption )
 
 end subroutine ShowCharacter

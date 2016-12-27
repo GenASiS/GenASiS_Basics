@@ -1,9 +1,16 @@
 program UNIT_Singleton_Test
 
+  use MeasuredValue_Form
   use UNIT_Singleton
   
   implicit none
-  
+
+  type ( MeasuredValueForm ) :: &
+    EnergyUnit, &
+    LengthUnit, &
+    EnergyLengthUnit, &
+    EnergyDensityUnit
+
   call UNIT % Initialize ( )
 
   print*
@@ -18,11 +25,17 @@ program UNIT_Singleton_Test
   print*, 'KILOMETER           ', UNIT % KILOMETER  
   print*, 'PARSEC              ', UNIT % PARSEC     
   print*, 'GIGAPARSEC          ', UNIT % GIGAPARSEC
+  print*, 'ANGSTROM            ', UNIT % ANGSTROM
+
+  print*
+  print*, 'Angle Units' 
+  print*, 'RADIAN              ', UNIT % RADIAN     
 
   print*
   print*, 'Time Units' 
   print*, 'SECOND              ', UNIT % SECOND     
   print*, 'MILLISECOND         ', UNIT % MILLISECOND
+  print*, 'FEMTOSECOND         ', UNIT % FEMTOSECOND
 
   print*
   print*, 'Frequency Units'
@@ -51,10 +64,12 @@ program UNIT_Singleton_Test
   print*
   print*, 'Force Units'
   print*, 'NEWTON              ', UNIT % NEWTON
+  print*, 'DYNE                ', UNIT % DYNE
 
   print*
   print*, 'Pressure Units'
   print*, 'PASCAL              ', UNIT % PASCAL
+  print*, 'BARYE               ', UNIT % BARYE
 
   print*
   print*, 'Temperature Units'
@@ -68,7 +83,24 @@ program UNIT_Singleton_Test
   print*, 'TESLA               ', UNIT % TESLA
   print*, 'GAUSS               ', UNIT % GAUSS
 
+  print*
   print*, 'Mass Density'
   print*, 'MASS_DENSITY_CGS    ', UNIT % MASS_DENSITY_CGS
+
+  print*
+  print*, 'Energy/length conversion'
+  print*, 'HBAR_C              ', UNIT % HBAR_C
+
+  print*
+  print*, 'Test'
+  EnergyUnit = UNIT % MEV
+  print*, 'EnergyUnit          ', EnergyUnit
+  LengthUnit = UNIT % HBAR_C / UNIT % MEV
+  print*, 'LengthUnit          ', LengthUnit
+  EnergyLengthUnit = EnergyUnit * LengthUnit
+  print*, 'EnergyLengthUnit ', EnergyLengthUnit
+  EnergyDensityUnit = EnergyUnit / ( LengthUnit ** 3 ) 
+  print*, 'EnergyDensityUnit   ', EnergyDensityUnit
+  
 
 end program UNIT_Singleton_Test

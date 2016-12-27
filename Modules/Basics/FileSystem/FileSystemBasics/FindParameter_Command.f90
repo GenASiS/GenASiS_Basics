@@ -1,5 +1,5 @@
 !-- Given an array of strings of the form label=value, FindParameter 
-!   finds the one with a particular label (if it exists) and read the value.
+!   finds the one with a particular label (if it exists) and reads the value.
 
 module FindParameter_Command
 
@@ -31,7 +31,8 @@ contains
 
 
   subroutine FindParameterInteger_0D &
-               ( Value, Buffer, Source, Name, IgnorabilityOption, SuccessOption )
+               ( Value, Buffer, Source, Name, IgnorabilityOption, &
+                 SuccessOption )
 
     integer ( KDI ), intent ( inout ) :: &
       Value
@@ -115,7 +116,8 @@ contains
 
     Success = .false.
     do iB = 1, size ( Buffer )
-      call ReadLabelValue ( Label, Scratch, Buffer ( iB ), InputUnit, Success ) 
+      call ReadLabelValue &
+             ( Label, Scratch, Buffer ( iB ), InputUnit, Success ) 
       if ( Success .and. trim ( Label ) == trim ( Name ) ) exit
       Success = .false.
     end do
@@ -140,7 +142,8 @@ contains
       end if
       if ( present ( InputUnitOption ) ) InputUnitOption = InputUnit
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -188,7 +191,8 @@ contains
 
     Success = .false.
     do iB = 1, size ( Buffer )
-      call ReadLabelValue ( Label, Scratch, Buffer ( iB ), InputUnit, Success ) 
+      call ReadLabelValue &
+             ( Label, Scratch, Buffer ( iB ), InputUnit, Success ) 
       if ( Success .and. trim ( Label ) == trim ( Name ) ) exit
       Success = .false.
     end do
@@ -219,7 +223,8 @@ contains
       end if
       if ( present ( InputUnitOption ) ) InputUnitOption = InputUnit
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -227,7 +232,8 @@ contains
 
 
   subroutine FindParameterLogical_0D &
-               ( Value, Buffer, Source, Name, IgnorabilityOption, SuccessOption )
+               ( Value, Buffer, Source, Name, IgnorabilityOption, &
+                 SuccessOption )
 
     logical ( KDL ), intent ( inout ) :: &
       Value
@@ -269,7 +275,8 @@ contains
       call Show ( Source, 'Source', Ignorability )
       call Show ( Value, Name, Ignorability )
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -277,7 +284,8 @@ contains
 
 
   subroutine FindParameterCharacter_0D &
-               ( Value, Buffer, Source, Name, IgnorabilityOption, SuccessOption )
+               ( Value, Buffer, Source, Name, IgnorabilityOption, &
+                 SuccessOption )
 
     character ( * ), intent ( inout ) :: &
       Value
@@ -319,7 +327,8 @@ contains
       call Show ( Source, 'Source', Ignorability )
       call Show ( Value, Name, Ignorability )
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -375,7 +384,8 @@ contains
       call Show ( Value ( : nValues ), Name, Ignorability )
       if ( present ( nValuesOption ) ) nValuesOption = nValues
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -393,8 +403,9 @@ contains
     character ( * ), intent ( in ) :: &
       Source, &
       Name
-    type ( MeasuredValueForm ), dimension ( : ), intent ( inout ), optional :: &
-      InputUnitOption
+    type ( MeasuredValueForm ), dimension ( : ), intent ( inout ), &
+      optional :: &
+        InputUnitOption
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
     integer ( KDI ), intent ( in ), optional :: &
@@ -447,7 +458,8 @@ contains
       if ( present ( nValuesOption ) ) nValuesOption = nValues
       if ( present ( InputUnitOption ) ) InputUnitOption = InputUnit
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -465,8 +477,9 @@ contains
     character ( * ), intent ( in ) :: &
       Source, &
       Name
-    type ( MeasuredValueForm ), dimension ( : ), intent ( inout ), optional :: &
-      InputUnitOption
+    type ( MeasuredValueForm ), dimension ( : ), intent ( inout ), &
+      optional :: &
+        InputUnitOption
     integer ( KDI ), intent ( inout ), optional :: &
       nValuesOption
     integer ( KDI ), intent ( in ), optional :: &
@@ -519,7 +532,8 @@ contains
       if ( present ( nValuesOption ) ) nValuesOption = nValues
       if ( present ( InputUnitOption ) ) InputUnitOption = InputUnit
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -575,7 +589,8 @@ contains
       call Show ( Value ( : nValues ), Name, Ignorability )
       if ( present ( nValuesOption ) ) nValuesOption = nValues
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 
@@ -631,7 +646,8 @@ contains
       call Show ( Value ( : nValues ), Name, Ignorability )
       if ( present ( nValuesOption ) ) nValuesOption = nValues
     else
-      call Show ( 'Parameter ' // trim ( Name ) // ' not found', Ignorability )
+      call Show ( 'Parameter ' // trim ( Name ) // ' not found', &
+                  Ignorability )
       call Show ( Source, 'Source', Ignorability )
     end if
 

@@ -166,7 +166,8 @@ contains
         iaC => CF % iaConserved )
 
     call Old % Initialize ( [ Current % nValues, Current % N_CONSERVED ] )
-    call Primitive % Initialize ( Current, SelectedOption = Current % iaPrimitive )
+    call Primitive % Initialize &
+           ( Current, iaSelectedOption = Current % iaPrimitive )
 
     do iV = 1, Current % N_CONSERVED
       call Copy ( Current % Value ( :, iaC ( iV ) ), Old % Value ( :, iV ) )

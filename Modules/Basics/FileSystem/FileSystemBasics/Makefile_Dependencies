@@ -12,12 +12,12 @@ FindParameter_Command.o: \
   ReadLabelValue_Command.o \
   FindParameter_Command.f90
 
-ParametersStream_Form.o: \
+ParameterStream_Form.o: \
   VariableManagement.o \
   Display.o \
   DelayFileAccess_Command.o \
   FindParameter_Command.o \
-  ParametersStream_Form.f90
+  ParameterStream_Form.f90
 
 TableStream_Form.o: \
   VariableManagement.o \
@@ -29,6 +29,9 @@ FileSystemBasics.o: \
   DelayFileAccess_Command.o \
   ReadLabelValue_Command.o \
   FindParameter_Command.o \
-  ParametersStream_Form.o \
+  ParameterStream_Form.o \
   TableStream_Form.o \
   FileSystemBasics.f90
+
+FileSystemBasics.a: $(FILE_SYSTEM_BASICS)
+	ar r FileSystemBasics.a $(FILE_SYSTEM_BASICS)

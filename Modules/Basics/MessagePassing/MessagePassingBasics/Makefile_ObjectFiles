@@ -1,4 +1,4 @@
 MESSAGE_PASSING_BASICS = \
-  Communicator_Form.o \
+  MessagePassingBasics.o \
   PortalHeader_Form.o \
-  MessagePassingBasics.o
+  Communicator_Form.o

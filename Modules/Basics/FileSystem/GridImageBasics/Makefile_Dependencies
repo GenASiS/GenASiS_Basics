@@ -62,3 +62,6 @@ GridImageBasics.o: \
   GridImage_Template.o \
   GridImageSilo_Template.o \
   GridImageBasics.f90
+
+GridImageBasics.a: $(GRID_IMAGE_BASICS)
+	ar r GridImageBasics.a $(GRID_IMAGE_BASICS)

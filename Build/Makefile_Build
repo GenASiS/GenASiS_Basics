@@ -4,12 +4,9 @@ include $(PATH_BUILD)/Makefile_Path
 include $(PATH_BUILD)/Makefile_ObjectFiles
 include $(PATH_BUILD)/Machines/Makefile_$(MACHINE)
 
-INCLUDE_PROGRAMS = \
-  -I$(PATH_GENASIS)/Modules/Basics/VariableManagement/ArrayOperations/
-
 INCLUDE = \
-  $(INCLUDE_SILO) $(INCLUDE_PETSC) $(INCLUDE_FFTW) $(INCLUDE_PROGRAMS)
+  $(INCLUDE_SILO) $(INCLUDE_HDF5) $(INCLUDE_PETSC) $(INCLUDE_FFTW)
 LIBRARIES = \
-  $(LIBRARY_SILO) $(LIBRARY_PETSC) $(LIBRARY_FFTW) $(LIBRARY_PROGRAMS)
+  $(LIBRARY_SILO) $(LIBRARY_HDF5) $(LIBRARY_PETSC) $(LIBRARY_FFTW)
 
 include $(PATH_BUILD)/Makefile_Patterns

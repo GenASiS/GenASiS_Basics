@@ -1,5 +1,6 @@
 program PROGRAM_HEADER_Singleton_Test
 
+  use OMP_LIB
   use VariableManagement
   use Display
   use PROGRAM_HEADER_Singleton
@@ -17,11 +18,11 @@ program PROGRAM_HEADER_Singleton_Test
          ( Name, AppendDimensionalityOption = .false. )
   
   call Show ( PROGRAM_HEADER % Communicator % Rank, 'Hello world from rank' )
-  
-!  !$OMP parallel private ( Thread )
-!  Thread = OMP_GET_THREAD_NUM ( )
-!  call Show ( Thread, 'Hello world from thread' )
-!  !$OMP end parallel
+
+  !$OMP parallel private ( Thread )
+  Thread = OMP_GET_THREAD_NUM ( )
+  call Show ( Thread, 'Hello world from thread' )
+  !$OMP end parallel
 
   deallocate ( PROGRAM_HEADER )
 
