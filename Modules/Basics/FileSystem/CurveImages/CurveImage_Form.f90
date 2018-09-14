@@ -167,7 +167,7 @@ contains
       CycleNumberOption
     
     integer ( KDI ) :: &
-      iG, &     !-- iGroup
+      iStrg, &     !-- iStorage
       iS, &     !-- iSelected
       iVrbl, &  !-- iVariable
       nSiloOptions, &
@@ -207,89 +207,115 @@ contains
                  = GI % Stream % Communicator % Size * [ GI % nTotalCells ], &
                RootOption = 0 )
       
-      do iG = 1, GI % nVariableGroups
+      do iStrg = 1, GI % nStorages
         
-        associate ( VG => GI % VariableGroup ( iG ) )
+        associate ( S => GI % Storage ( iStrg ) )
 
-          call GI % Stream % MakeDirectory ( VG % Name )
+        call Show ( 'Writing a Storage (curve)', CONSOLE % INFO_5 )
+        call Show ( iStrg, 'iStorage', CONSOLE % INFO_5 )
+        call Show ( S % Name, 'Name', CONSOLE % INFO_5 )
+
+        call GI % Stream % MakeDirectory ( S % Name )
         
-          do iS = 1, VG % nVariables
+        do iS = 1, S % nVariables
 
-            iVrbl = VG % iaSelected ( iS ) 
+          iVrbl = S % iaSelected ( iS ) 
             
-            nSiloOptions &
-              = count &
-                  ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
-                      len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
-                      len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
+          call Show ( 'Writing a Variable (structured)', CONSOLE % INFO_6 )
+          call Show ( iS, 'iSelected', CONSOLE % INFO_6 )
+          call Show ( S % Variable ( iVrbl ), 'Name', CONSOLE % INFO_6 )
+
+          nSiloOptions &
+            = count &
+                ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
+                    len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
+                    len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
             
-            Error = DBMKOPTLIST ( nSiloOptions, SiloOptionList )
+          Error = DBMKOPTLIST ( nSiloOptions, SiloOptionList )
             
-            if ( len_trim ( GI % CoordinateLabel ( 1 ) ) > 0 ) &
-              Error = DBADDCOPT &
-                        ( SiloOptionList, DBOPT_XLABEL, &
-                          trim ( GI % CoordinateLabel ( 1 ) ), &
-                          len_trim ( GI % CoordinateLabel ( 1 ) ) )
+          if ( len_trim ( GI % CoordinateLabel ( 1 ) ) > 0 ) &
             Error = DBADDCOPT &
-                      ( SiloOptionList, DBOPT_YLABEL, &
-                        trim ( VG % Variable ( iVrbl ) ), &
-                        len_trim ( VG % Variable ( iVrbl ) ) )
-            if ( len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0 ) & 
-              Error = DBADDCOPT &
-                        ( SiloOptionList, DBOPT_XUNITS, &
-                          trim ( GI % CoordinateUnit ( 1 ) % Label ), &
-                          len_trim ( GI % CoordinateUnit ( 1 ) % Label ) )
-            if ( len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ) &
-              Error = DBADDCOPT &
-                        ( SiloOptionList, DBOPT_YUNITS, &
-                          trim ( VG % Unit ( iVrbl ) % Label ), &
-                          len_trim ( VG % Unit ( iVrbl ) % Label ) )
+                      ( SiloOptionList, DBOPT_XLABEL, &
+                        trim ( GI % CoordinateLabel ( 1 ) ), &
+                        len_trim ( GI % CoordinateLabel ( 1 ) ) )
+          Error = DBADDCOPT &
+                    ( SiloOptionList, DBOPT_YLABEL, &
+                      trim ( S % Variable ( iVrbl ) ), &
+                      len_trim ( S % Variable ( iVrbl ) ) )
+          if ( len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0 ) & 
+            Error = DBADDCOPT &
+                      ( SiloOptionList, DBOPT_XUNITS, &
+                        trim ( GI % CoordinateUnit ( 1 ) % Label ), &
+                        len_trim ( GI % CoordinateUnit ( 1 ) % Label ) )
+          if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) &
+            Error = DBADDCOPT &
+                      ( SiloOptionList, DBOPT_YUNITS, &
+                        trim ( S % Unit ( iVrbl ) % Label ), &
+                        len_trim ( S % Unit ( iVrbl ) % Label ) )
               
-            CO_Variable % Outgoing % Value &
-              = VG % Value &
-                  ( GI % oValue + 1 : GI % oValue + GI % nTotalCells, iVrbl )
-            call CO_Variable % Gather ( )
+          CO_Variable % Outgoing % Value &
+            = S % Value &
+                ( GI % oValue + 1 : GI % oValue + GI % nTotalCells, iVrbl )
+          call CO_Variable % Gather ( )
+
+          call Show ( trim ( S % Variable ( iVrbl ) ), 'Variable', &
+                      CONSOLE % INFO_6 )
+          call Show ( S % lVariable ( iVrbl ), 'lVariable', CONSOLE % INFO_6 )
+          call Show ( nSiloOptions, 'nSiloOptions', CONSOLE % INFO_6 )
+          if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) then
+            call Show ( trim ( S % Unit ( iVrbl ) % Label ), 'Unit', &
+                        CONSOLE % INFO_6 )
+            call Show ( len_trim ( S % Unit ( iVrbl ) % Label ), 'lUnit', &
+                        CONSOLE % INFO_6 )
+          end if
+
+          Error = DBPUTCURVE &
+                    ( GI % Stream % MeshBlockHandle, &
+                      trim ( S % Variable ( iVrbl ) ), &
+                      S % lVariable ( iVrbl ), &
+                      GI % NodeCoordinate_1 &
+                        / GI % CoordinateUnit ( 1 ) % Number, &
+                      S % Value ( GI % oValue + 1 &
+                                     : GI % oValue + GI % nTotalCells, &
+                                   iVrbl ) &
+                        / S % Unit ( iVrbl ) % Number, &
+                      DB_DOUBLE, GI % nTotalCells, SiloOptionList, Error )
+          
+          if ( GI % Stream % IsWritable ( CheckMultiMeshOption = .true. ) )&
+          then
+
+            associate &
+              ( Coordinate    => CO_Coordinate % Incoming % Value, &
+                VariableValue => CO_Variable % Incoming % Value )
 
             Error = DBPUTCURVE &
-                      ( GI % Stream % MeshBlockHandle, &
-                        trim ( VG % Variable ( iVrbl ) ), &
-                        VG % lVariable ( iVrbl ), &
-                        GI % NodeCoordinate_1 &
-                          / GI % CoordinateUnit ( 1 ) % Number, &
-                        VG % Value ( GI % oValue + 1 &
-                                       : GI % oValue + GI % nTotalCells, &
-                                     iVrbl ) &
-                          / VG % Unit ( iVrbl ) % Number, &
-                        DB_DOUBLE, GI % nTotalCells, SiloOptionList, Error )
-          
-            if ( GI % Stream % IsWritable ( CheckMultiMeshOption = .true. ) )&
-            then
+                      ( GI % Stream % MultiMeshHandle, &
+                        trim ( S % Variable ( iVrbl ) ), &
+                        S % lVariable ( iVrbl ), &
+                        Coordinate / GI % CoordinateUnit ( 1 ) % Number, &
+                        VariableValue / S % Unit ( iVrbl ) % Number, &
+                        DB_DOUBLE, size ( VariableValue ), &
+                        SiloOptionList, Error )
 
-              associate &
-                ( Coordinate    => CO_Coordinate % Incoming % Value, &
-                  VariableValue => CO_Variable % Incoming % Value )
-
-              Error = DBPUTCURVE &
-                        ( GI % Stream % MultiMeshHandle, &
-                          trim ( VG % Variable ( iVrbl ) ), &
-                          VG % lVariable ( iVrbl ), &
-                          Coordinate / GI % CoordinateUnit ( 1 ) % Number, &
-                          VariableValue / VG % Unit ( iVrbl ) % Number, &
-                          DB_DOUBLE, size ( VariableValue ), &
-                          SiloOptionList, Error )
-
-              end associate
+            end associate
             
-            end if
+          end if
             
-            if ( SiloOptionList /= DB_F77NULL ) then
-              Error = DBFREEOPTLIST ( SiloOptionList )
-              SiloOptionList = DB_F77NULL
-            end if
+          if ( SiloOptionList /= DB_F77NULL ) then
+            call Show ( SiloOptionList, 'SiloOptionList before free', &
+                        CONSOLE % INFO_6 )        
+            Error = DBFREEOPTLIST ( SiloOptionList )
+            call Show ( SiloOptionList, 'SiloOptionList after free', &
+                        CONSOLE % INFO_6 )        
+            SiloOptionList = DB_F77NULL
+            call Show ( SiloOptionList, 'SiloOptionList after nullification', &
+                        CONSOLE % INFO_6 )        
+            call Show ( DB_F77NULL, 'DB_F77NULL', CONSOLE % INFO_6 )
+          end if
                 
-          end do
+        end do
           
-          call GI % Stream % ChangeDirectory ( '../' )
+        call GI % Stream % ChangeDirectory ( '../' )
           
         end associate
         
@@ -297,64 +323,90 @@ contains
 
     else !-- .not. Parallel
     
-      do iG = 1, GI % nVariableGroups
+      do iStrg = 1, GI % nStorages
         
-        associate ( VG => GI % VariableGroup ( iG ) )
+        associate ( S => GI % Storage ( iStrg ) )
         
-          call GI % Stream % MakeDirectory ( VG % Name )
-        
-          do iS = 1 , VG % nVariables
+        call Show ( 'Writing a Storage (curve)', CONSOLE % INFO_5 )
+        call Show ( iStrg, 'iStorage', CONSOLE % INFO_5 )
+        call Show ( S % Name, 'Name', CONSOLE % INFO_5 )
 
-            iVrbl = VG % iaSelected ( iS )
+        call GI % Stream % MakeDirectory ( S % Name )
+        
+        do iS = 1 , S % nVariables
+
+          iVrbl = S % iaSelected ( iS )
             
-            nSiloOptions &
-              = count &
-                  ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
-                      len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
-                      len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
+          call Show ( 'Writing a Variable (structured)', CONSOLE % INFO_6 )
+          call Show ( iS, 'iSelected', CONSOLE % INFO_6 )
+          call Show ( S % Variable ( iVrbl ), 'Name', CONSOLE % INFO_6 )
+
+          nSiloOptions &
+            = count &
+                ( [ len_trim ( GI % CoordinateLabel ( 1 ) ) > 0, &
+                    len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0, &
+                    len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ] ) + 1
             
-            Error = DBMKOPTLIST ( nSiloOptions, SiloOptionList )
+          Error = DBMKOPTLIST ( nSiloOptions, SiloOptionList )
             
-            if ( len_trim ( GI % CoordinateLabel ( 1 ) ) > 0 ) &
-              Error = DBADDCOPT &
-                        ( SiloOptionList, DBOPT_XLABEL, &
-                          trim ( GI % CoordinateLabel ( 1 ) ), &
-                          len_trim ( GI % CoordinateLabel ( 1 ) ) )
+          if ( len_trim ( GI % CoordinateLabel ( 1 ) ) > 0 ) &
             Error = DBADDCOPT &
-                      ( SiloOptionList, DBOPT_YLABEL, &
-                        trim ( VG % Variable ( iVrbl ) ), &
-                        len_trim ( VG % Variable ( iVrbl ) ) )
-            if ( len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0 ) &
-              Error = DBADDCOPT &
-                        ( SiloOptionList, DBOPT_XUNITS, &
-                          trim ( GI % CoordinateUnit ( 1 ) % Label ), &
-                          len_trim ( GI % CoordinateUnit ( 1 ) % Label ) )
-            if ( len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ) &
-              Error = DBADDCOPT &
-                        ( SiloOptionList, DBOPT_YUNITS, &
-                          trim ( VG % Unit ( iVrbl ) % Label ), &
-                          len_trim ( VG % Unit ( iVrbl ) % Label ) )
+                      ( SiloOptionList, DBOPT_XLABEL, &
+                        trim ( GI % CoordinateLabel ( 1 ) ), &
+                        len_trim ( GI % CoordinateLabel ( 1 ) ) )
+          Error = DBADDCOPT &
+                    ( SiloOptionList, DBOPT_YLABEL, &
+                      trim ( S % Variable ( iVrbl ) ), &
+                      len_trim ( S % Variable ( iVrbl ) ) )
+          if ( len_trim ( GI % CoordinateUnit ( 1 ) % Label ) > 0 ) &
+            Error = DBADDCOPT &
+                      ( SiloOptionList, DBOPT_XUNITS, &
+                        trim ( GI % CoordinateUnit ( 1 ) % Label ), &
+                        len_trim ( GI % CoordinateUnit ( 1 ) % Label ) )
+          if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) &
+            Error = DBADDCOPT &
+                      ( SiloOptionList, DBOPT_YUNITS, &
+                        trim ( S % Unit ( iVrbl ) % Label ), &
+                        len_trim ( S % Unit ( iVrbl ) % Label ) )
 
-            Error = DBPUTCURVE &
-                      ( GI % Stream % MeshBlockHandle, &
-                        trim ( VG % Variable ( iVrbl ) ), &
-                        VG % lVariable ( iVrbl ), &
-                        GI % NodeCoordinate_1 &
-                          / GI % CoordinateUnit ( 1 ) % Number, &
-                        VG % Value ( GI % oValue + 1 &
-                                       : GI % oValue + GI % nTotalCells, &
-                                     iVrbl ) &
-                          / VG % Unit ( iVrbl ) % Number, &
-                        DB_DOUBLE, GI % nTotalCells, SiloOptionList, Error )
+          call Show ( trim ( S % Variable ( iVrbl ) ), 'Variable', &
+                      CONSOLE % INFO_6 )
+          call Show ( S % lVariable ( iVrbl ), 'lVariable', CONSOLE % INFO_6 )
+          call Show ( nSiloOptions, 'nSiloOptions', CONSOLE % INFO_6 )
+          if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) then
+            call Show ( trim ( S % Unit ( iVrbl ) % Label ), 'Unit', &
+                        CONSOLE % INFO_6 )
+            call Show ( len_trim ( S % Unit ( iVrbl ) % Label ), 'lUnit', &
+                        CONSOLE % INFO_6 )
+          end if
+
+          Error = DBPUTCURVE &
+                    ( GI % Stream % MeshBlockHandle, &
+                      trim ( S % Variable ( iVrbl ) ), &
+                      S % lVariable ( iVrbl ), &
+                      GI % NodeCoordinate_1 &
+                        / GI % CoordinateUnit ( 1 ) % Number, &
+                      S % Value ( GI % oValue + 1 &
+                                     : GI % oValue + GI % nTotalCells, &
+                                   iVrbl ) &
+                        / S % Unit ( iVrbl ) % Number, &
+                      DB_DOUBLE, GI % nTotalCells, SiloOptionList, Error )
             
-            if ( SiloOptionList /= DB_F77NULL ) then
-              Error = DBFREEOPTLIST ( SiloOptionList )
-              SiloOptionList = DB_F77NULL
-            end if
+          if ( SiloOptionList /= DB_F77NULL ) then
+            call Show ( SiloOptionList, 'SiloOptionList before free', &
+                        CONSOLE % INFO_6 )        
+            Error = DBFREEOPTLIST ( SiloOptionList )
+            call Show ( SiloOptionList, 'SiloOptionList after free', &
+                        CONSOLE % INFO_6 )        
+            SiloOptionList = DB_F77NULL
+            call Show ( SiloOptionList, 'SiloOptionList after nullification', &
+                        CONSOLE % INFO_6 )        
+            call Show ( DB_F77NULL, 'DB_F77NULL', CONSOLE % INFO_6 )
+          end if
           
-          end do
+        end do
           
-          call GI % Stream % ChangeDirectory ( '../' )
+        call GI % Stream % ChangeDirectory ( '../' )
           
         end associate
 
@@ -377,7 +429,7 @@ contains
       CycleNumberOption
     
     integer ( KDI ) :: &
-      iG, &     !-- iGroup
+      iStrg, &     !-- iStorage
       iS, &     !-- iSelected
       iVrbl, &  !-- iVariable
       nSiloOptions, &
@@ -390,7 +442,7 @@ contains
       X_Scratch, &
       Y_Scratch
     character ( LDL ), dimension ( : ), allocatable :: &
-      GroupName, &
+      StorageName, &
       VariableName
     character ( LDF ) :: &
       WorkingDirectory
@@ -405,17 +457,17 @@ contains
     
     call GI % ReadHeader ( TimeOption, CycleNumberOption )
     
-    !-- prepare VariableGroup to read into
-    if ( GI % nVariableGroups == 0 ) then
+    !-- prepare Storage to read into
+    if ( GI % nStorages == 0 ) then
       call GI % Stream % ListContents ( ContentTypeOption = 'Directory' )
-      GI % nVariableGroups = size ( GI % Stream % ContentList )
+      GI % nStorages = size ( GI % Stream % ContentList )
 !-- FIXME: NAG 5.3.1 should support sourced allocation
-!      allocate ( GroupName, source = GI % Stream % ContentList )
-      allocate ( GroupName ( size ( GI % Stream % ContentList ) ) )
-      GroupName = GI % Stream % ContentList
-      do iG = 1, GI % nVariableGroups
-        if ( len_trim ( GroupName ( iG ) ) > 0 ) &
-          call GI % Stream % ChangeDirectory ( GroupName ( iG ) )
+!      allocate ( StorageName, source = GI % Stream % ContentList )
+      allocate ( StorageName ( size ( GI % Stream % ContentList ) ) )
+      StorageName = GI % Stream % ContentList
+      do iStrg = 1, GI % nStorages
+        if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
+          call GI % Stream % ChangeDirectory ( StorageName ( iStrg ) )
         call GI % Stream % ListContents &
                ( ContentTypeOption = 'Curve' )
         if ( allocated ( VariableName ) ) deallocate ( VariableName )
@@ -424,7 +476,7 @@ contains
         VariableName = GI % Stream % ContentList 
         nVariables = size ( GI % Stream % ContentList )
         if ( nVariables == 0 ) then
-          GI % nVariableGroups = 0
+          GI % nStorages = 0
         else
           !-- read the first curve varriable to get the nTotalCells
           Error = DBGETCURVE &
@@ -437,12 +489,12 @@ contains
             deallocate ( GI % NodeCoordinate_1 )
           allocate ( GI % NodeCoordinate_1 ( GI % nTotalCells ) )
 
-          call GI % VariableGroup ( iG ) % Initialize &
+          call GI % Storage ( iStrg ) % Initialize &
                  ( [ GI % oValue + GI % nTotalCells, nVariables ], &
                      VariableOption = VariableName, &
-                     NameOption = GroupName ( iG ) )
+                     NameOption = StorageName ( iStrg ) )
           
-          associate ( VG => GI % VariableGroup ( iG ) )
+          associate ( S => GI % Storage ( iStrg ) )
           
           do iVrbl = 1, nVariables
             Error = DBGETCURVE &
@@ -450,7 +502,7 @@ contains
                         trim ( VariableName ( iVrbl ) ), &
                         len_trim ( VariableName ( iVrbl ) ), &
                         GI % nTotalCells, GI % NodeCoordinate_1, &
-                        VG % Value ( GI % oValue + 1 &
+                        S % Value ( GI % oValue + 1 &
                                        : GI % oValue + GI % nTotalCells, &
                                      iVrbl ), &
                         DataType, nTotalCells )
@@ -458,8 +510,8 @@ contains
             !-- FIXME: An assumption is made that the unit used to write
             !          and read are the same. A better way would be to read
             !          the unit directly from Silo file.
-            VG % Value ( :, iVrbl ) &
-              = VG % Value ( :, iVrbl ) * VG % Unit ( iVrbl ) % Number
+            S % Value ( :, iVrbl ) &
+              = S % Value ( :, iVrbl ) * S % Unit ( iVrbl ) % Number
 
           end do
           
@@ -467,7 +519,7 @@ contains
         
         end if
         
-        if ( len_trim ( GroupName ( iG ) ) > 0 ) &
+        if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
           call GI % Stream % ChangeDirectory ( '..' )
       end do
     end if
@@ -506,8 +558,8 @@ contains
     
     nullify ( CI % Stream )
     
-    if ( allocated ( CI % VariableGroup ) ) &
-      deallocate ( CI % VariableGroup )
+    if ( allocated ( CI % Storage ) ) &
+      deallocate ( CI % Storage )
 
     call CI % ClearGrid ( )
 

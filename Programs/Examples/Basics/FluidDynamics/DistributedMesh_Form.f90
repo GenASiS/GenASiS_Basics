@@ -37,12 +37,12 @@ module DistributedMesh_Form
       CoordinateUnit
     character ( LDL ) :: &
       BoundaryCondition = 'PERIODIC'
-    type ( VariableGroupForm ) :: &
+    type ( StorageForm ) :: &
       Position
-    type ( VariableGroupForm ), dimension ( : ), allocatable :: &
-      ExchangeVariableGroup
-    type ( VariableGroup_1D_Form ), allocatable :: &
-      VariableGroup
+    type ( StorageForm ), dimension ( : ), allocatable :: &
+      ExchangeStorage
+    type ( Storage_1D_Form ), allocatable :: &
+      Storage
     type ( CommunicatorForm ), pointer :: &
       Communicator => null ( )
     type ( PortalHeaderForm ) :: &
@@ -108,7 +108,7 @@ contains
     character ( * ), intent ( in ), optional :: &
       BoundaryConditionOption
 
-    DM % IGNORABILITY =  CONSOLE % INFO_3
+    DM % IGNORABILITY =  CONSOLE % INFO_1
     DM % Communicator => C
 
     call Show ( 'Initializing a DistributedMesh', DM % IGNORABILITY )
@@ -143,31 +143,31 @@ contains
   end subroutine SetVariablePointer
 
 
-  subroutine StartGhostExchangeSingle ( DM, VG )
+  subroutine StartGhostExchangeSingle ( DM, S )
 
     class ( DistributedMeshForm ), intent ( inout ) :: &
       DM
-    class ( VariableGroupForm ), intent ( inout ) :: &
-      VG
+    class ( StorageForm ), intent ( inout ) :: &
+      S
 
-    allocate ( DM % ExchangeVariableGroup ( 1 ) )
-    call DM % ExchangeVariableGroup ( 1 ) % Initialize ( VG )
+    allocate ( DM % ExchangeStorage ( 1 ) )
+    call DM % ExchangeStorage ( 1 ) % Initialize ( S )
 
-    call StartGhostExchangeMultiple ( DM, DM % ExchangeVariableGroup )
+    call StartGhostExchangeMultiple ( DM, DM % ExchangeStorage )
     
   end subroutine StartGhostExchangeSingle
 
 
-  subroutine StartGhostExchangeMultiple ( DM, VG )
+  subroutine StartGhostExchangeMultiple ( DM, S )
 
     class ( DistributedMeshForm ), intent ( inout ) :: &
       DM
-    class ( VariableGroupForm ), dimension ( : ), intent ( inout ) :: &
-      VG
+    class ( StorageForm ), dimension ( : ), intent ( inout ) :: &
+      S
 
     integer ( KDI ) :: &
       iD, jD, kD, &  !-- iDimension, etc.
-      iG, &  !-- iGroup
+      iStrg, &  !-- iStorage
       iS, &  !-- iSelected
       iV, &  !-- iVariable
       oBuffer
@@ -177,27 +177,27 @@ contains
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V  !-- Variable
 
-    allocate ( DM % VariableGroup )
+    allocate ( DM % Storage )
     allocate ( DM % IncomingPrevious )
     allocate ( DM % IncomingNext )
     allocate ( DM % OutgoingPrevious )
     allocate ( DM % OutgoingNext )
 
     associate &
-      ( VG_1D  => DM % VariableGroup, &
+      ( S_1D  => DM % Storage, &
         PHP => DM % PortalHeaderPrevious, &
         PHN => DM % PortalHeaderNext )
 
-    call VG_1D % Initialize ( VG )
+    call S_1D % Initialize ( S )
 
     !-- Post Receives
 
     call DM % IncomingPrevious % Initialize &
            ( DM % Communicator, spread ( TAG_IN_PREV, 1, PHP % nSources ), &
-             PHP % Source, PHP % nChunksFrom * VG_1D % nVariablesTotal )
+             PHP % Source, PHP % nChunksFrom * S_1D % nVariablesTotal )
     call DM % IncomingNext % Initialize &
            ( DM % Communicator, spread ( TAG_IN_NEXT, 1, PHN % nSources ), &
-             PHN % Source, PHN % nChunksFrom * VG_1D % nVariablesTotal )
+             PHN % Source, PHN % nChunksFrom * S_1D % nVariablesTotal )
 
     call DM % IncomingPrevious % Receive ( )
     call DM % IncomingNext % Receive ( )
@@ -206,7 +206,7 @@ contains
 
     call DM % OutgoingPrevious % Initialize &
            ( DM % Communicator, spread ( TAG_OUT_PREV, 1, PHP % nTargets ), &
-             PHP % Target, PHP % nChunksTo * VG_1D % nVariablesTotal )
+             PHP % Target, PHP % nChunksTo * S_1D % nVariablesTotal )
 
     do iD = 1, DM % nDimensions
       jD = mod ( iD, 3 ) + 1
@@ -218,16 +218,16 @@ contains
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
 
-      do iG = 1, VG_1D % nGroups
-        do iS = 1, VG_1D % nVariables ( iG )          
-          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
+      do iStrg = 1, S_1D % nStorages
+        do iS = 1, S_1D % nVariables ( iStrg )          
+          iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( V, nSend, oSend, oBuffer, &
                       DM % OutgoingPrevious % Message ( iD ) % Value )
           oBuffer = oBuffer + product ( nSend )
         end do !-- iS
-      end do !-- iG
+      end do !-- iStrg
 
       call DM % OutgoingPrevious % Send ( iD )
 
@@ -237,7 +237,7 @@ contains
 
     call DM % OutgoingNext % Initialize &
            ( DM % Communicator, spread ( TAG_OUT_NEXT, 1, PHN % nTargets ), &
-             PHN % Target, PHN % nChunksTo * VG_1D % nVariablesTotal )
+             PHN % Target, PHN % nChunksTo * S_1D % nVariablesTotal )
 
     do iD = 1, DM % nDimensions
       jD = mod ( iD, 3 ) + 1
@@ -251,23 +251,23 @@ contains
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
 
-      do iG = 1, VG_1D % nGroups
-        do iS = 1, VG_1D % nVariables ( iG )          
-          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
+      do iStrg = 1, S_1D % nStorages
+        do iS = 1, S_1D % nVariables ( iStrg )          
+          iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( V, nSend, oSend, oBuffer, &
                       DM % OutgoingNext % Message ( iD ) % Value )
           oBuffer = oBuffer + product ( nSend )
         end do !-- iS
-      end do !-- iG
+      end do !-- iStrg
 
       call DM % OutgoingNext % Send ( iD )
 
     end do !-- iD
 
     nullify ( V )
-    end associate !-- VG_1D, etc.
+    end associate !-- S_1D, etc.
 
   end subroutine StartGhostExchangeMultiple
 
@@ -279,7 +279,7 @@ contains
 
     integer ( KDI ) :: &
       iD, jD, kD, &  !-- iDimension, etc.
-      iG, &  !-- iGroup
+      iStrg, &  !-- iStorage
       iS, &  !-- iSelected
       iV, &  !-- iVariable
       oBuffer
@@ -289,7 +289,7 @@ contains
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V  !-- Variable
 
-    associate ( VG_1D  => DM % VariableGroup )
+    associate ( S_1D  => DM % Storage )
 
     !-- Receive from Next
 
@@ -306,16 +306,16 @@ contains
 
       call DM % IncomingNext % Wait ( iD )
 
-      do iG = 1, VG_1D % nGroups
-        do iS = 1, VG_1D % nVariables ( iG )          
-          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
+      do iStrg = 1, S_1D % nStorages
+        do iS = 1, S_1D % nVariables ( iStrg )          
+          iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( DM % IncomingNext % Message ( iD ) % Value, &
                       nReceive, oReceive, oBuffer, V )
           oBuffer = oBuffer + product ( nReceive )
         end do !-- iS
-      end do !-- iG
+      end do !-- iStrg
 
     end do !-- iD
 
@@ -334,16 +334,16 @@ contains
 
       call DM % IncomingPrevious % Wait ( iD )
 
-      do iG = 1, VG_1D % nGroups
-        do iS = 1, VG_1D % nVariables ( iG )          
-          iV = VG_1D % VariableGroup ( iG ) % iaSelected ( iS )
+      do iStrg = 1, S_1D % nStorages
+        do iS = 1, S_1D % nVariables ( iStrg )          
+          iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
-                 ( VG_1D % VariableGroup ( iG ) % Value ( :, iV ), V ) 
+                 ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( DM % IncomingPrevious % Message ( iD ) % Value, &
                       nReceive, oReceive, oBuffer, V )
           oBuffer = oBuffer + product ( nReceive )
         end do !-- iS
-      end do !-- iG
+      end do !-- iStrg
 
     end do !-- iD
 
@@ -353,32 +353,32 @@ contains
     call DM % OutgoingNext % Wait ( )
 
     nullify ( V )
-    end associate !-- VG_1D
+    end associate !-- S_1D
 
     deallocate ( DM % OutgoingNext )
     deallocate ( DM % OutgoingPrevious )
     deallocate ( DM % IncomingNext )
     deallocate ( DM % IncomingPrevious )
-    deallocate ( DM % VariableGroup )
+    deallocate ( DM % Storage )
 
-    if ( allocated ( DM % ExchangeVariableGroup ) ) &
-      deallocate ( DM % ExchangeVariableGroup )
+    if ( allocated ( DM % ExchangeStorage ) ) &
+      deallocate ( DM % ExchangeStorage )
 
   end subroutine FinishGhostExchange
 
 
-  subroutine SetImage ( DM, VG, Name )
+  subroutine SetImage ( DM, S, Name )
 
     class ( DistributedMeshForm ), intent ( inout ) :: &
       DM
-    class ( VariableGroupForm ), dimension ( : ), intent ( in ) :: &
-      VG
+    class ( StorageForm ), dimension ( : ), intent ( in ) :: &
+      S
     character ( * ), intent ( in ) :: &
       Name
 
     integer ( KDI ) :: &
       iD, &  !-- iDimension
-      iVG    !-- iVariableGroup
+      iS    !-- iStorage
     integer ( KDI ), dimension ( MAX_N_DIMENSIONS ) :: &
       nCells, &
       nGhostInner, &
@@ -393,7 +393,7 @@ contains
     OutputDirectory = '../Output/'
     call PROGRAM_HEADER % GetParameter ( OutputDirectory, 'OutputDirectory' )
     
-    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DM % iTimer_IO )
+    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DM % iTimer_IO, Level = 1 )
     
     call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Start ( )
 
@@ -434,8 +434,8 @@ contains
              ( 'Curves', Edge ( 1 ), DM % nProperCells, &
                oValue = nGhostInner ( 1 ) + nExteriorInner ( 1 ), &
                CoordinateUnitOption = DM % CoordinateUnit ( 1 ) )
-      do iVG = 1, size ( VG )
-        call CI % AddVariableGroup ( VG ( iVG ) )
+      do iS = 1, size ( S )
+        call CI % AddStorage ( S ( iS ) )
       end do
       end associate !-- CI
 
@@ -448,8 +448,8 @@ contains
                nExteriorInner, nExteriorOuter, DM % nDimensions, &
                DM % nProperCells, DM % nGhostCells, &
                CoordinateUnitOption = DM % CoordinateUnit )
-      do iVG = 1, size ( VG )
-        call GI % AddVariableGroup ( VG ( iVG ) )
+      do iS = 1, size ( S )
+        call GI % AddStorage ( S ( iS ) )
       end do
       end associate !-- GI
 
@@ -474,7 +474,8 @@ contains
       CycleNumberOption
           
     call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Start ( )
-    
+    call Show ( 'Writing image', CONSOLE % INFO_1 )
+
     associate ( GIS => DM % GridImageStream )
     call GIS % Open ( GIS % ACCESS_CREATE )
 
@@ -490,6 +491,7 @@ contains
     call GIS % Close ( )
     end associate !-- GIS
     
+    call Show ( DM % GridImageStream % Number, 'iImage', CONSOLE % INFO_1 )
     call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Stop ( )
     
   end subroutine Write
@@ -531,51 +533,40 @@ contains
     CommunicatorSizeRoot &
       = DM % Communicator % Size ** ( 1.0_KDR / DM % nDimensions ) + 0.5_KDR
 
-    if &
-      ( CommunicatorSizeRoot ** DM % nDimensions &
-        /= DM % Communicator % Size ) &
-    then
-      call Show &
-             ( 'The square root  ( 2D ) or cube root  ( 3D ) of the number ' &
-               // 'of MPI processes must be an integer', &
-               CONSOLE % ERROR )
-      call Show &
-             ( DM % Communicator % Size, 'nProcesses', CONSOLE % ERROR )
-      call Show &
-             ( DM % nDimensions, 'nDimensions', CONSOLE % ERROR )
-      call Show &
-             ( DM % Communicator % Size ** ( 1.0_KDR / DM % nDimensions ), &
-               'nProcessesRoot', CONSOLE % ERROR )
+    DM % nBricks = 1
+    DM % nBricks ( : DM % nDimensions ) = CommunicatorSizeRoot
+    call PROGRAM_HEADER % GetParameter &
+           ( DM % nBricks ( : DM % nDimensions ), 'nBricks' )
+    
+    if ( product ( DM % nBricks ) /= DM % Communicator % Size ) then
+      call Show ( 'The total number of bricks must equal ' &
+                  // 'the number of MPI processes', CONSOLE % ERROR )
+      call Show ( DM % Communicator % Size, 'nProcesses', CONSOLE % ERROR )
+      call Show ( DM % nBricks ( 1 : DM % nDimensions ), 'nBricks', &
+                  CONSOLE % ERROR )
+      call Show ( product ( DM % nBricks ), 'product ( DM % nBricks )', &
+                  CONSOLE % ERROR )
+      call Show ( 'DistributedMesh_Form', 'module', CONSOLE % ERROR )
+      call Show ( 'SetBrickDecomposition', 'subroutine', CONSOLE % ERROR )
+      call PROGRAM_HEADER % Communicator % Synchronize ( )
       call PROGRAM_HEADER % Abort ( )
     end if
-    
+
     do iD = 1, DM % nDimensions
-      if &
-        ( DM % nCells ( iD ) > 1 &
-         .and. mod ( DM % nCells ( iD ), CommunicatorSizeRoot ) /= 0 ) &
-      then
-        call Show &
-               ( 'The square root  ( 2D ) or cube root  ( 3D ) of the number '&
-                 // 'of MPI processes must divide evenly into ' &
-                 // 'nCells in each dimension', &
-                 CONSOLE % ERROR )
+      if ( mod ( DM % nCells ( iD ), DM % nBricks ( iD ) ) /= 0 ) then
+        call Show ( 'nBricks in each dimension must divide evenly into ' &
+                    // 'nCells in each dimension', CONSOLE % ERROR )
         call Show ( iD, 'iDimension', CONSOLE % ERROR )
-        call Show &
-               ( DM % nCells ( iD ), 'nTopLevelCells', &
-                 CONSOLE % ERROR )
-        call Show &
-               ( DM % Communicator % Size ** ( 1.0_KDR / DM % nDimensions ), &
-                 'nProcessesRoot', CONSOLE % ERROR )
-        call Show &
-               ( ( 1.0_KDR * DM % nCells ( iD ) ) / CommunicatorSizeRoot, &
-                 'nBricks', CONSOLE % ERROR )
+        call Show ( DM % nCells ( iD ), 'nCells', CONSOLE % ERROR )
+        call Show ( DM % nBricks ( iD ), 'nBricks', CONSOLE % ERROR )
+        call Show ( 'DistributedMesh_Form', 'module', CONSOLE % ERROR )
+        call Show ( 'SetBrickDecomposition', 'subroutine', CONSOLE % ERROR )
+        call PROGRAM_HEADER % Communicator % Synchronize ( )
         call PROGRAM_HEADER % Abort ( )
       end if
     end do
     
-    DM % nCellsPerBrick &
-      = max ( DM % nCells / CommunicatorSizeRoot, 1 )
-    DM % nBricks = DM % nCells / DM % nCellsPerBrick
+    DM % nCellsPerBrick = DM % nCells / DM % nBricks
     DM % iaBrick = BrickIndex ( DM )  
 
     DM % iaFirst = 1

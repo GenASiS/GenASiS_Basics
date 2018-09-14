@@ -110,10 +110,10 @@ contains
       iE  !-- iEdge
 
     if ( DP % Type == '' ) DP % Type = 'DistributedParticles'
-    call Show ( 'Initializing ' // trim ( DP % Type ), CONSOLE % INFO_2 )
+    call Show ( 'Initializing ' // trim ( DP % Type ), CONSOLE % INFO_1 )
 
     DP % nParticles = nParticles
-    call Show ( DP % nParticles, 'nParticles', CONSOLE % INFO_2 )
+    call Show ( DP % nParticles, 'nParticles', CONSOLE % INFO_1 )
 
     if ( mod ( DP % nParticles, C % Size ) /= 0 ) then
       call Show ( 'The number of MPI processes must divide evenly ' &
@@ -131,7 +131,7 @@ contains
     if ( present ( LengthUnitOption ) ) DP % LengthUnit = LengthUnitOption
 
     DP % BoxLength = BoxLength
-    call Show ( DP % BoxLength, DP % LengthUnit, 'BoxLength', CONSOLE % INFO_2 )
+    call Show ( DP % BoxLength, DP % LengthUnit, 'BoxLength', CONSOLE % INFO_1 )
 
     allocate ( DP % GuestPosition ( DP % nMyParticles, 3 ) )
 
@@ -309,24 +309,24 @@ contains
   end function MyAngularMomentum
 
 
-  subroutine SetImage ( DP, VG_P, VG_V, Name )
+  subroutine SetImage ( DP, S_P, S_V, Name )
 
     class ( DistributedParticlesForm ), intent ( inout ) :: &
       DP
-    class ( VariableGroupForm ), dimension ( : ), intent ( in ) :: &
-      VG_P, &
-      VG_V
+    class ( StorageForm ), dimension ( : ), intent ( in ) :: &
+      S_P, &
+      S_V
     character ( * ), intent ( in ) :: &
       Name
 
     integer ( KDI ) :: &
-      iVG  !-- iVariableGroup
+      iS  !-- iStorage
     character ( LDF ) :: &
       OutputDirectory
 
     OutputDirectory = '../Output/'
     call PROGRAM_HEADER % GetParameter ( OutputDirectory, 'OutputDirectory' )    
-    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DP % iTimer_IO )
+    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DP % iTimer_IO, Level = 1 )
     
     call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Start ( )
 
@@ -338,22 +338,22 @@ contains
 
     associate ( GIP => DP % GridImagePosition )
     call GIP % Initialize ( GIS ) 
-    do iVG = 1, size ( VG_P )
-      call GIP % AddVariableGroup ( VG_P ( iVG ) )
+    do iS = 1, size ( S_P )
+      call GIP % AddStorage ( S_P ( iS ) )
     end do
     end associate !-- GIP
 
     associate ( GIPB => DP % GridImagePositionBox )
     call GIPB % Initialize ( GIS ) 
-    do iVG = 1, size ( VG_P )
-      call GIPB % AddVariableGroup ( VG_P ( iVG ) )
+    do iS = 1, size ( S_P )
+      call GIPB % AddStorage ( S_P ( iS ) )
     end do
     end associate !-- GIPB
 
     associate ( GIV => DP % GridImageVelocity )
     call GIV % Initialize ( GIS ) 
-    do iVG = 1, size ( VG_V )
-      call GIV % AddVariableGroup ( VG_V ( iVG ) )
+    do iS = 1, size ( S_V )
+      call GIV % AddStorage ( S_V ( iS ) )
     end do
     end associate !-- GIV
 
@@ -376,6 +376,7 @@ contains
       CycleNumberOption
       
     call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Start ( )
+    call Show ( 'Writing image', CONSOLE % INFO_1 )
     
     associate ( GIS => DP % GridImageStream )
     call GIS % Open ( GIS % ACCESS_CREATE )
@@ -416,6 +417,7 @@ contains
     call GIS % Close ( )
     end associate !-- GIS
     
+    call Show ( DP % GridImageStream % Number, 'iImage', CONSOLE % INFO_1 )
     call PROGRAM_HEADER % Timer ( DP % iTimer_IO ) % Stop ( )
     
   end subroutine Write

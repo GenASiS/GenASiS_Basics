@@ -12,7 +12,8 @@ module ConservationLawEvolution_Template
     integer ( KDI ) :: &
       iCycle, &
       nRampCycles, &
-      nWrite
+      nWrite, &
+      nCycles
     real ( KDR ) :: &
       CourantFactor, &
       StartTime, &
@@ -58,7 +59,7 @@ contains
     character ( * ), intent ( in ), optional :: &
       BoundaryConditionOption
 
-    call Show ( 'Initializing ' // trim ( CLE % Type ), CONSOLE % INFO_2 )
+    call Show ( 'Initializing ' // trim ( CLE % Type ), CONSOLE % INFO_1 )
 
     associate ( DM => CLE % DistributedMesh )
     call DM % Initialize ( C, BoundaryConditionOption )
@@ -81,10 +82,13 @@ contains
     CLE % StartTime  = 0.0_KDR
     CLE % FinishTime = 1.0_KDR
     CLE % TimeUnit   = UNIT % IDENTITY
+    CLE % nCycles    = huge ( 1 )
     call PROGRAM_HEADER % GetParameter &
            ( CLE % StartTime, 'StartTime', InputUnitOption = CLE % TimeUnit )    
     call PROGRAM_HEADER % GetParameter &
            ( CLE % FinishTime, 'FinishTime', InputUnitOption = CLE % TimeUnit )
+    call PROGRAM_HEADER % GetParameter &
+           ( CLE % nCycles, 'nCycles' )
 
     CLE % nWrite = 100
     call PROGRAM_HEADER % GetParameter ( CLE % nWrite, 'nWrite' )
@@ -110,7 +114,8 @@ contains
     integer ( KDI ) :: &
       iTimerComputation
       
-    call PROGRAM_HEADER % AddTimer ( 'Computational', iTimerComputation )
+    call PROGRAM_HEADER % AddTimer &
+           ( 'Computational', iTimerComputation, Level = 1 )
     
     associate &
       ( DM  => CLE % DistributedMesh, &
@@ -127,13 +132,14 @@ contains
     CLE % WriteTime &
       = min ( CLE % Time + CLE % WriteTimeInterval, CLE % FinishTime )
 
-    call Show ( 'Evolving a Fluid', CONSOLE % INFO_2 )
+    call Show ( 'Evolving a Fluid', CONSOLE % INFO_1 )
     
     call T % Start ( ) 
 
-    do while ( CLE % Time < CLE % FinishTime )
+    do while ( CLE % Time < CLE % FinishTime &
+               .and. CLE % iCycle < CLE % nCycles )
 
-      call Show ( 'Solving Conservation Equations', CONSOLE % INFO_3 )
+      call Show ( 'Solving Conservation Equations', CONSOLE % INFO_2 )
 
       call ComputeTimeStep ( CLE )
       if ( CLE % Time + CLE % TimeStep > CLE % WriteTime ) &
@@ -145,11 +151,11 @@ contains
 
       CLE % iCycle = CLE % iCycle + 1
       CLE % Time = CLE % Time + CLE % TimeStep
-      call Show ( CLE % iCycle, 'iCycle', CONSOLE % INFO_3 )
-      call Show ( CLE % Time, CLE % TimeUnit, 'Time', CONSOLE % INFO_3 )
+      call Show ( CLE % iCycle, 'iCycle', CONSOLE % INFO_2 )
+      call Show ( CLE % Time, CLE % TimeUnit, 'Time', CONSOLE % INFO_2 )
 
       if ( CLE % Time >= CLE % WriteTime ) then
-        
+
         call T % Stop ( )
 
         call DM % Write &
@@ -158,6 +164,9 @@ contains
         CLE % WriteTime &
           = min ( CLE % Time + CLE % WriteTimeInterval, CLE % FinishTime )
         
+        call Show ( CLE % iCycle, 'iCycle', CONSOLE % INFO_1 )
+        call Show ( CLE % Time, CLE % TimeUnit, 'Time', CONSOLE % INFO_1 )
+
         call T % Start ( )
         
       end if
@@ -217,7 +226,7 @@ contains
              FEM_1 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
              FEM_2 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
              FEM_3 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             DM % CellWidth, CO % Outgoing % Value ( 1 ) )
+             DM % CellWidth, DM % nDimensions, CO % Outgoing % Value ( 1 ) )
     end associate !-- nCPB
     call CO % Reduce ( REDUCTION % MIN )
 
@@ -231,19 +240,32 @@ contains
 
   subroutine ComputeTimeStepKernel &
                ( FEP_1, FEP_2, FEP_3, FEM_1, FEM_2, FEM_3, &
-                 CellWidth, TimeStepLocal )
+                 CellWidth, nDimensions, TimeStepLocal )
 
     real ( KDR ), dimension ( :, :, : ), intent ( in ) :: &
       FEP_1, FEP_2, FEP_3, &
       FEM_1, FEM_2, FEM_3
     real ( KDR ), dimension ( : ), intent ( in ) :: &
       CellWidth
+    integer ( KDI ), intent ( in ) :: &
+      nDimensions
     real ( KDR ), intent ( out ) :: &
       TimeStepLocal
 
-    TimeStepLocal &
-      = minval ( CellWidth ) &
-        / maxval ( max ( FEP_1, FEP_2, FEP_3, -FEM_1, -FEM_2, -FEM_3 ) )
+    select case ( nDimensions ) 
+    case ( 1 ) 
+      TimeStepLocal &
+        = CellWidth ( 1 ) &
+          / maxval ( max ( FEP_1, -FEM_1 ) )
+    case ( 2 ) 
+      TimeStepLocal &
+        = minval ( CellWidth ( 1 : 2 ) ) &
+          / maxval ( max ( FEP_1, FEP_2, -FEM_1, -FEM_2 ) )
+    case ( 3 ) 
+      TimeStepLocal &
+        = minval ( CellWidth ) &
+          / maxval ( max ( FEP_1, FEP_2, FEP_3, -FEM_1, -FEM_2, -FEM_3 ) )
+    end select
 
   end subroutine ComputeTimeStepKernel
 

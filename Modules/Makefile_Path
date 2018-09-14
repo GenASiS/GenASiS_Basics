@@ -3,4 +3,5 @@ PATH_BASICS      = $(PATH_MODULES)/Basics
 include $(PATH_BASICS)/Makefile_Path
 
 VPATH_MODULES = \
-  $(VPATH_BASICS)
+  $(VPATH_BASICS):\
+  $(PATH_MODULES)

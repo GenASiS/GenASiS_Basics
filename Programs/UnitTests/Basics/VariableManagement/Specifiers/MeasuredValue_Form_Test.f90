@@ -1,6 +1,8 @@
 program MeasuredValue_Form_Test
 
+  use ISO_FORTRAN_ENV
   use KIND_DEFAULT_Singleton
+  use KIND_BIG_Singleton
   use MeasuredValue_Form
 
   implicit none
@@ -11,6 +13,12 @@ program MeasuredValue_Form_Test
     Length_1, &
     Length_2, &
     Time_1
+
+  if ( KBCH == selected_char_kind ( 'ASCII' ) ) then
+    open ( OUTPUT_UNIT, encoding = 'DEFAULT' )
+  else if ( KBCH == selected_char_kind ( 'ISO_10646' ) ) then
+    open ( OUTPUT_UNIT, encoding = 'UTF-8' )
+  end if
 
   print *
 
@@ -74,8 +82,11 @@ program MeasuredValue_Form_Test
   print *
   print *, '*** Exponentiation'
   print *
-  print *, 'Length_1 ** 2', Length_1 ** 2_KDI
-  print *, 'Length_1 ** 0.5 =', Length_1 ** 0.5_KDR
+  print *, 'Length_1 ** 2 =', Length_1 ** 2_KDI
+  print *, 'Length_1 ** (-3) =', Length_1 ** (-3_KDI)
+  print *, '( Length_1 ** 2 ) ** (-3)  =', &
+           ( Length_1 ** 2_KDI ) ** (-3_KDI)
+!  print *, 'Length_1 ** 0.5 =', Length_1 ** 0.5_KDR
 
   !-- Division
 
