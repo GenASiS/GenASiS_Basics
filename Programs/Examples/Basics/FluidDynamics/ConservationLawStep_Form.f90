@@ -243,7 +243,8 @@ contains
     integer ( KDI ) :: &
       iV  !-- iVariable
     type ( StorageForm ) :: &
-      Primitive
+      Primitive!, &
+      !Eigenspeed
 
     associate &
       ( CF => CLS % ConservedFields )
@@ -262,7 +263,12 @@ contains
         
     call Primitive % Initialize &
            ( Current, iaSelectedOption = Current % iaPrimitive )
-
+    
+    !call Eigenspeed % Initialize &
+    !       ( Current, &
+    !         iaSelectedOption = [ Current % FAST_EIGENSPEED_PLUS ( : ), &
+    !                              Current % FAST_EIGENSPEED_MINUS ( : ) ] )
+    
     call T_DT_D % Start ( )
     call Current % UpdateDevice ( )
     call T_DT_D % Stop ( )
@@ -301,16 +307,16 @@ contains
     call T_A % Stop ( )
     
     call T_DT_H % Start ( )
-    call Current % UpdateHost ( ) 
+    call Primitive % UpdateHost ( ) 
     call T_DT_H % Stop ( )
     
     call T_C % Start ( )
-    call DM % StartGhostExchange ( Primitive )
+    call DM % StartGhostExchange ( )
     call DM % FinishGhostExchange ( )
     call T_C % Stop ( )
     
     call T_DT_D % Start ( )
-    call Current % UpdateDevice ( )
+    call Primitive % UpdateDevice ( )
     call T_DT_D % Stop ( )
     
     !-- Substep 2
@@ -343,13 +349,17 @@ contains
     call T_A % Stop ( )
     
     call T_DT_H % Start ( )
-    call Current % UpdateHost ( ) 
+    call Primitive % UpdateHost ( ) 
     call T_DT_H % Stop ( )
     
     call T_C % Start ( )
-    call DM % StartGhostExchange ( Primitive )
+    call DM % StartGhostExchange ( )
     call DM % FinishGhostExchange ( )
     call T_C % Stop ( )
+    
+    !call T_DT_H % Start ( )
+    !call Eigenspeed % UpdateHost ( ) 
+    !call T_DT_H % Stop ( )
     
     end associate !-- DM, etc.
     end associate !-- CF
