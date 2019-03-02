@@ -4,7 +4,8 @@
 module Message_R__Form
 
   use MPI
-  use VariableManagement
+  use Specifiers
+  use Devices
   use MessagePassingBasics
   use Message_Template
 
@@ -21,6 +22,8 @@ module Message_R__Form
       InitializeAssociate
     generic :: &
       Initialize => InitializeAllocate, InitializeAssociate
+    procedure, private, pass :: &
+      AllocateDevice_M
     final :: &
       Finalize
   end type Message_R_Form
@@ -67,6 +70,16 @@ contains
     M % Value => Value
   
   end subroutine InitializeAssociate
+  
+  
+  subroutine AllocateDevice_M ( M )
+    
+    class ( Message_R_Form ), intent ( inout ), target :: &
+      M
+    
+    call AllocateDevice ( M % Value, M % D_Value )
+    
+  end subroutine AllocateDevice_M
   
   
   elemental subroutine Finalize ( M )

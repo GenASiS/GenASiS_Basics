@@ -5,7 +5,7 @@
 module MessageIncoming_1D_R__Form
 
   use MPI
-  use VariableManagement
+  use Specifiers
   use MessagePassingBasics
   use Message_Template
   use MessageIncoming_R__Form
@@ -66,8 +66,8 @@ contains
     nullify ( M )
 
   end subroutine InitializeAllocate
-
-
+  
+  
   subroutine ReceiveOne ( M_1D, iM )
 
     class ( MessageIncoming_1D_R_Form ), intent ( inout ), target :: &

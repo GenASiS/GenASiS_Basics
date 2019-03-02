@@ -1,2 +1,8 @@
 include $(PATH_BASICS)/Makefile_Dependencies
 
+GenASiS.o: \
+  Basics.o \
+  GenASiS.f90
+
+GenASiS.a: $(MODULES)
+	ar r GenASiS.a $(MODULES)

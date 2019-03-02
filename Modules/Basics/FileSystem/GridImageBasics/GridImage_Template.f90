@@ -3,7 +3,8 @@
 
 module GridImage_Template
 
-  use VariableManagement
+  use Specifiers
+  use DataManagement
   use Display
   use GridImageStream_Template
         
@@ -11,7 +12,7 @@ module GridImage_Template
   private
   
   integer, private, parameter :: &
-    MAX_VARIABLE_GROUPS = 16 
+    MAX_VARIABLE_GROUPS = 96
 
   type, public, abstract :: GridImageTemplate
     integer ( KDI ) :: &
@@ -20,26 +21,24 @@ module GridImage_Template
       nDimensions         = 0, &
       nTotalCells         = 0, &
       nGhostCells         = 0, &
-      nVariableGroups     = 0
+      nStorages     = 0
     real ( KDR ), dimension ( : ), allocatable :: &
       NodeCoordinate_1, &
       NodeCoordinate_2, &
       NodeCoordinate_3
     character ( LDL ), dimension ( 3 ) :: &
-      CoordinateLabel = [ 'X                             ', &
-                          'Y                             ', &
-                          'Z                             ' ]
+      CoordinateLabel = [ 'X', 'Y', 'Z' ]
     type ( MeasuredValueForm ), dimension ( 3 ) :: &
       CoordinateUnit
-    type ( VariableGroupForm ), dimension ( : ), allocatable :: &
-      VariableGroup
+    type ( StorageForm ), dimension ( : ), allocatable :: &
+      Storage
   contains
     procedure, public, pass :: &
       InitializeTemplate
     procedure, public, pass :: &
-      AddVariableGroup
+      AddStorage
     procedure, public, pass :: &
-      ClearVariableGroups
+      ClearStorages
     !-- FIXME: Removed the following deferred procedures (and their 
     !          interfaces) to avoid multiple definition error during linking
     !          with Cray compiler (CCE). These deferredn procesdures will only
@@ -56,7 +55,7 @@ module GridImage_Template
   !  
   !  subroutine WriteMultiMeshInterface &
   !               ( GI, Name, TimeOption, CycleNumberOption, HideOption )
-  !    use VariableManagement
+  !    use Specifiers
   !    import GridImageTemplate
   !    class ( GridImageTemplate ), intent ( inout ) :: &
   !      GI
@@ -73,7 +72,7 @@ module GridImage_Template
   !  
   !  subroutine WriteMultiVariableInterface &
   !               ( GI, Name, TimeOption, CycleNumberOption )
-  !    use VariableManagement
+  !    use Specifiers
   !    import GridImageTemplate
   !    class ( GridImageTemplate ), intent ( inout ) :: &
   !      GI
@@ -96,43 +95,43 @@ contains
     class ( GridImageTemplate ), intent ( inout ) :: &
       GI
 
-    allocate ( GI % VariableGroup ( GI % MAX_VARIABLE_GROUPS ) )
+    allocate ( GI % Storage ( GI % MAX_VARIABLE_GROUPS ) )
 
   end subroutine InitializeTemplate
 
 
-  subroutine AddVariableGroup ( GI, VG )
+  subroutine AddStorage ( GI, S )
 
     class ( GridImageTemplate ), intent ( inout ), target :: &
       GI
-    class ( VariableGroupForm ), intent ( in ) :: &
-      VG
+    class ( StorageForm ), intent ( in ) :: &
+      S
 
-    GI % nVariableGroups = GI % nVariableGroups + 1
+    GI % nStorages = GI % nStorages + 1
 
-    if ( GI % nVariableGroups > size ( GI % VariableGroup ) ) then
+    if ( GI % nStorages > size ( GI % Storage ) ) then
       call Show &
-             ( 'Too many VariableGroups in GridImage', CONSOLE % ERROR )
+             ( 'Too many Storages in GridImage', CONSOLE % ERROR )
       return
     end if
 
-    call GI % VariableGroup ( GI % nVariableGroups ) % Initialize ( VG )
+    call GI % Storage ( GI % nStorages ) % Initialize ( S )
 
-  end subroutine AddVariableGroup
+  end subroutine AddStorage
 
 
-  subroutine ClearVariableGroups ( GI )
+  subroutine ClearStorages ( GI )
 
     class ( GridImageTemplate ), intent ( inout ), target :: &
       GI
     
-    if ( allocated ( GI % VariableGroup ) ) deallocate ( GI % VariableGroup )
+    if ( allocated ( GI % Storage ) ) deallocate ( GI % Storage )
 
-    allocate ( GI % VariableGroup ( GI % MAX_VARIABLE_GROUPS ) )
+    allocate ( GI % Storage ( GI % MAX_VARIABLE_GROUPS ) )
 
-    GI % nVariableGroups = 0
+    GI % nStorages = 0
 
-  end subroutine ClearVariableGroups
+  end subroutine ClearStorages
 
 
 end module GridImage_Template

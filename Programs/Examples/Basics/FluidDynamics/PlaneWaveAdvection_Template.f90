@@ -62,6 +62,9 @@ contains
     type is ( PressurelessFluidForm )
 
     call PF % Initialize ( DM, NameOption = 'PressurelessFluid' )
+    call PF % AllocateDevice ( )
+
+    call DM % SetGhostExchange ( PF )
 
     nWavelengths = 0
     nWavelengths ( 1 : DM % nDimensions ) = 1

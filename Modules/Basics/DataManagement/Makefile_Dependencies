@@ -1,0 +1,14 @@
+include $(PATH_ARRAY_OPERATIONS)/Makefile_Dependencies
+include $(PATH_ARRAY_ARRAYS)/Makefile_Dependencies
+include $(PATH_STORAGES)/Makefile_Dependencies
+
+DataManagement.o: \
+  Specifiers.o \
+  Devices.o \
+  ArrayOperations.o \
+  ArrayArrays.o \
+  Storages.o \
+  DataManagement.f90
+
+DataManagement.a: $(DATA_MANAGEMENT)
+	ar r DataManagement.a $(DATA_MANAGEMENT)

@@ -1,6 +1,7 @@
 program ReadLabelValue_Command_Test
 
-  use VariableManagement
+  use ISO_FORTRAN_ENV
+  use Specifiers
   use Display
   use MessagePassing
   use ReadLabelValue_Command
@@ -29,6 +30,8 @@ program ReadLabelValue_Command_Test
     Success
   logical ( KDL ), dimension ( 10 ) :: &
     ArrayLogicalValue
+  character ( 5 ) :: &
+    Encoding
   character ( LDL ) :: &
     ScalarStringValue, &
     Label
@@ -55,6 +58,15 @@ program ReadLabelValue_Command_Test
   allocate ( C )
   call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
+
+!-- Runtime error with CCE
+!  if ( KBCH == selected_char_kind ( 'ASCII' ) ) then
+!    open ( OUTPUT_UNIT, encoding = 'DEFAULT' )
+!  else if ( KBCH == selected_char_kind ( 'ISO_10646' ) ) then
+  if ( KBCH == selected_char_kind ( 'ISO_10646' ) ) then
+    Encoding = 'UTF-8'
+    open ( OUTPUT_UNIT, encoding = Encoding )
+  end if
 
   call UNIT % Initialize ( )
     

@@ -1,6 +1,7 @@
 program FindParameter_Command_Test
 
-  use VariableManagement
+  use ISO_FORTRAN_ENV
+  use Specifiers
   use Display
   use MessagePassing
   use FindParameter_Command
@@ -25,6 +26,8 @@ program FindParameter_Command_Test
     Logical_0D
   logical ( KDL ), dimension ( 10 ) :: &
     Logical_1D
+  character ( 5 ) :: &
+    Encoding
   character ( LDF ) :: &
     Character_0D
   character ( LDF ), dimension ( 10 ) :: &
@@ -34,9 +37,19 @@ program FindParameter_Command_Test
   type ( CommunicatorForm ), allocatable :: &
     C
 
+!-- Runtime error with CCE
+!  if ( KBCH == selected_char_kind ( 'ASCII' ) ) then
+!    open ( OUTPUT_UNIT, encoding = 'DEFAULT' )
+!  else if ( KBCH == selected_char_kind ( 'ISO_10646' ) ) then
+  if ( KBCH == selected_char_kind ( 'ISO_10646' ) ) then
+    Encoding = 'UTF-8'
+    open ( OUTPUT_UNIT, encoding = Encoding )
+  end if
+
   allocate ( C )
   call C % Initialize ( )
   call CONSOLE % Initialize ( C % Rank )
+  call CONSOLE % SetVerbosity ( 'INFO_4' )
 
   call UNIT % Initialize ( )
 

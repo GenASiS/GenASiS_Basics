@@ -4,7 +4,8 @@
 module StructuredGridImage_Form
   
   use iso_c_binding
-  use VariableManagement
+  use Specifiers
+  use DataManagement
   use Display
   use GridImageBasics
   
@@ -45,13 +46,13 @@ module StructuredGridImage_Form
     procedure, private, pass :: &
       WriteMesh
     procedure, private, pass :: &
-      WriteVariableGroup
+      WriteStorage
     procedure, public, pass :: &
       Read
     procedure, private, pass :: &
       ReadMesh
     procedure, private, pass :: &
-      ReadVariableGroup
+      ReadStorage
     procedure, public, pass :: &
       ClearGrid
     final :: &
@@ -395,7 +396,7 @@ contains
     
     call GI % WriteMesh ( TimeOption, CycleNumberOption )
     
-    call GI % WriteVariableGroup ( TimeOption, CycleNumberOption ) 
+    call GI % WriteStorage ( TimeOption, CycleNumberOption ) 
     
     call GI % Stream % ChangeDirectory ( WorkingDirectory ) 
   
@@ -412,10 +413,10 @@ contains
       CycleNumberOption
     
     integer ( KDI ) :: &
-      iG, &
+      iStrg, &
       nVariables 
     character ( LDL ), dimension ( : ), allocatable :: &
-      GroupName, &
+      StorageName, &
       VariableName
     character ( LDF ) :: &
       WorkingDirectory
@@ -430,17 +431,17 @@ contains
     
     call GI % ReadMesh ( )
     
-    !-- prepare VariableGroup to read into
-    if ( GI % nVariableGroups == 0 ) then
+    !-- prepare Storage to read into
+    if ( GI % nStorages == 0 ) then
       call GI % Stream % ListContents ( ContentTypeOption = 'Directory' )
-      GI % nVariableGroups = size ( GI % Stream % ContentList )
+      GI % nStorages = size ( GI % Stream % ContentList )
 !-- FIXME: NAG 5.3.1 should support sourced allocation
-!      allocate ( GroupName, source = GI % Stream % ContentList )
-      allocate ( GroupName ( size ( GI % Stream % ContentList ) ) )
-      GroupName = GI % Stream % ContentList
-      do iG = 1, GI % nVariableGroups
-        if ( len_trim ( GroupName ( iG ) ) > 0 ) &
-          call GI % Stream % ChangeDirectory ( GroupName ( iG ) )
+!      allocate ( StorageName, source = GI % Stream % ContentList )
+      allocate ( StorageName ( size ( GI % Stream % ContentList ) ) )
+      StorageName = GI % Stream % ContentList
+      do iStrg = 1, GI % nStorages
+        if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
+          call GI % Stream % ChangeDirectory ( StorageName ( iStrg ) )
         call GI % Stream % ListContents &
                ( ContentTypeOption = 'StructuredGridVariable' )
         if ( allocated ( VariableName ) ) deallocate ( VariableName )
@@ -449,20 +450,20 @@ contains
         VariableName = GI % Stream % ContentList 
         nVariables = size ( GI % Stream % ContentList )
         if ( nVariables == 0 ) then
-          GI % nVariableGroups = 0
+          GI % nStorages = 0
         else
-          call GI % VariableGroup ( iG ) % Initialize &
+          call GI % Storage ( iStrg ) % Initialize &
                  ( [ product ( GI % nNodes ( 1 : GI % nDimensions ) - 1 ), &
                      nVariables ], &
                    VariableOption = VariableName, & 
-                   NameOption = GroupName ( iG ) )
+                   NameOption = StorageName ( iStrg ) )
         end if
-        if ( len_trim ( GroupName ( iG ) ) > 0 ) &
+        if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
           call GI % Stream % ChangeDirectory ( '..' )
       end do
     end if
       
-    call GI % ReadVariableGroup ( ) 
+    call GI % ReadStorage ( ) 
     
     call GI % Stream % ChangeDirectory ( WorkingDirectory ) 
     
@@ -494,8 +495,8 @@ contains
     
     nullify ( SGI % Stream )
 
-    if ( allocated ( SGI % VariableGroup ) ) &
-      deallocate ( SGI % VariableGroup )
+    if ( allocated ( SGI % Storage ) ) &
+      deallocate ( SGI % Storage )
 
     call SGI % ClearGrid ( )
 
@@ -635,7 +636,7 @@ contains
     SGI % oProperCellNodeHigh ( 1 : nDims ) &
       = SGI % nNodes ( 1 : nDims ) - 1 - DB_QM % MaximumIndex ( 1 : nDims ) 
     
-    !-- nCells, nTotalCells, and nGhostCells are set in ReadVariableGroup ( )
+    !-- nCells, nTotalCells, and nGhostCells are set in ReadStorage ( )
     
     end associate
     
@@ -701,7 +702,7 @@ contains
   end subroutine ReadMesh
   
   
-  subroutine WriteVariableGroup ( SGI, TimeOption, CycleNumberOption ) 
+  subroutine WriteStorage ( SGI, TimeOption, CycleNumberOption ) 
 
     class ( StructuredGridImageForm ), intent ( inout ) :: &
       SGI
@@ -714,7 +715,7 @@ contains
       iV, &      !-- iValue
       iVrbl, &   !-- iVariable
       iS, &      !-- iSelected
-      iG, &      !-- iGroup
+      iStrg, &      !-- iStorage
       nSiloOptions, &
       Centering, &
       SiloOptionList, &
@@ -748,34 +749,34 @@ contains
   
     MeshDirectory = SGI % Stream % CurrentDirectory
   
-    do iG = 1, SGI % nVariableGroups
+    do iStrg = 1, SGI % nStorages
     
-      associate ( VG => SGI % VariableGroup ( iG ) )
+      associate ( S => SGI % Storage ( iStrg ) )
     
-      call Show ( 'Writing a VariableGroup (structured)', CONSOLE % INFO_5 )
-      call Show ( iG, 'iGroup', CONSOLE % INFO_5 )
-      call Show ( VG % Name, 'Name', CONSOLE % INFO_5 )
+      call Show ( 'Writing a Storage (structured)', CONSOLE % INFO_5 )
+      call Show ( iStrg, 'iStorage', CONSOLE % INFO_5 )
+      call Show ( S % Name, 'Name', CONSOLE % INFO_5 )
 
-      call SGI % Stream % MakeDirectory ( VG % Name ) 
+      call SGI % Stream % MakeDirectory ( S % Name ) 
     
-      do iS = 1, VG % nVariables
+      do iS = 1, S % nVariables
         
-        iVrbl = VG % iaSelected ( iS )
+        iVrbl = S % iaSelected ( iS )
         
         call Show ( 'Writing a Variable (structured)', CONSOLE % INFO_6 )
         call Show ( iS, 'iSelected', CONSOLE % INFO_6 )
-        call Show ( VG % Variable ( iVrbl ), 'Name', CONSOLE % INFO_6 )
+        call Show ( S % Variable ( iVrbl ), 'Name', CONSOLE % INFO_6 )
 
         if ( allocated ( SGI % PillarHash ) ) then
           do iV = 1, size ( SGI % PillarHash )
             Value ( iV ) &
-              = VG % Value ( SGI % oValue + SGI % PillarHash ( iV ), iVrbl )
+              = S % Value ( SGI % oValue + SGI % PillarHash ( iV ), iVrbl )
           end do
         else
           Value_PGF ( -oVI ( 1 ) + 1 : nC ( 1 ) + oVO ( 1 ), &
                       -oVI ( 2 ) + 1 : nC ( 2 ) + oVO ( 2 ), &
                       -oVI ( 3 ) + 1 : nC ( 3 ) + oVO ( 3 ) ) &
-            => VG % Value ( SGI % oValue + 1 :, iVrbl )
+            => S % Value ( SGI % oValue + 1 :, iVrbl )
           Value_PG ( 1 : nC ( 1 ), 1 : nC ( 2 ), 1 : nC ( 3 ) ) &
             => Value 
           call Copy ( Value_PGF ( 1 : nC ( 1 ), 1 : nC ( 2 ), 1 : nC ( 3 ) ), &
@@ -787,7 +788,7 @@ contains
           nSiloOptions = nSiloOptions + 1
         if ( present ( CycleNumberOption ) ) &
           nSiloOptions = nSiloOptions + 1    
-        if ( len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ) &
+        if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) &
           nSiloOptions = nSiloOptions + 1
           
         if ( nSiloOptions > 0 ) &
@@ -799,64 +800,55 @@ contains
         if ( present ( CycleNumberOption ) ) &
           Error = DBADDIOPT &
                     ( SiloOptionList, DBOPT_CYCLE, CycleNumberOption )
-        if ( len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ) &
+        if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) &
           Error = DBADDCOPT &
                     ( SiloOptionList, DBOPT_UNITS, &
-                      trim ( VG % Unit ( iVrbl ) % Label ), &
-                      len_trim ( VG % Unit ( iVrbl ) % Label ) )
+                      trim ( S % Unit ( iVrbl ) % Label ), &
+                      len_trim ( S % Unit ( iVrbl ) % Label ) )
         
-        call Show &
-               ( trim ( VG % Variable ( iVrbl ) ), 'Variable', &
-                 CONSOLE % INFO_6 )
-        call Show &
-               ( VG % lVariable ( iVrbl ), 'lVariable', CONSOLE % INFO_6 )
-        call Show &
-               ( trim ( MeshDirectory ) // 'Mesh', 'MeshDirectory', &
-                 CONSOLE % INFO_6 )
-        call Show &
-               ( len_trim ( MeshDirectory ) + 4, 'lDirectory', &
-                 CONSOLE % INFO_6 )
+        call Show ( trim ( S % Variable ( iVrbl ) ), 'Variable', &
+                    CONSOLE % INFO_6 )
+        call Show ( S % lVariable ( iVrbl ), 'lVariable', CONSOLE % INFO_6 )
+        call Show ( trim ( MeshDirectory ) // 'Mesh', 'MeshDirectory', &
+                    CONSOLE % INFO_6 )
+        call Show ( len_trim ( MeshDirectory ) + 4, 'lDirectory', &
+                    CONSOLE % INFO_6 )
         call Show ( nSiloOptions, 'nSiloOptions', CONSOLE % INFO_6 )
-        if ( len_trim ( VG % Unit ( iVrbl ) % Label ) > 0 ) then
-          call Show &
-                 ( trim ( VG % Unit ( iVrbl ) % Label ), 'Unit', &
-                   CONSOLE % INFO_6 )
-          call Show &
-                 ( len_trim ( VG % Unit ( iVrbl ) % Label ), 'lUnit', &
-                   CONSOLE % INFO_6 )
+        if ( len_trim ( S % Unit ( iVrbl ) % Label ) > 0 ) then
+          call Show ( trim ( S % Unit ( iVrbl ) % Label ), 'Unit', &
+                      CONSOLE % INFO_6 )
+          call Show ( len_trim ( S % Unit ( iVrbl ) % Label ), 'lUnit', &
+                      CONSOLE % INFO_6 )
         end if
 
         Error = DBPUTQV1 &
                   ( SGI % Stream % MeshBlockHandle, &
-                    trim ( VG % Variable ( iVrbl ) ), &
-                    VG % lVariable ( iVrbl ), &
+                    trim ( S % Variable ( iVrbl ) ), &
+                    S % lVariable ( iVrbl ), &
                     trim ( MeshDirectory ) // 'Mesh', &
                     len_trim ( MeshDirectory ) + 4, &
-                    Value / VG % Unit ( iVrbl ) % Number, SGI % nCells, &
+                    Value / S % Unit ( iVrbl ) % Number, SGI % nCells, &
                     SGI % nDimensions, DB_F77NULL, 0, DB_DOUBLE, Centering, &
                     SiloOptionList, Error )
 
         if ( SiloOptionList /= DB_F77NULL ) then
-          call Show &
-                 ( SiloOptionList, 'SiloOptionList before free', &
-                   CONSOLE % INFO_6 )        
+          call Show ( SiloOptionList, 'SiloOptionList before free', &
+                      CONSOLE % INFO_6 )        
           Error = DBFREEOPTLIST ( SiloOptionList )
-          call Show &
-                 ( SiloOptionList, 'SiloOptionList after free', &
-                   CONSOLE % INFO_6 )        
+          call Show ( SiloOptionList, 'SiloOptionList after free', &
+                      CONSOLE % INFO_6 )        
           SiloOptionList = DB_F77NULL
-          call Show &
-                 ( SiloOptionList, 'SiloOptionList after nullification', &
-                   CONSOLE % INFO_6 )        
+          call Show ( SiloOptionList, 'SiloOptionList after nullification', &
+                      CONSOLE % INFO_6 )        
           call Show ( DB_F77NULL, 'DB_F77NULL', CONSOLE % INFO_6 )
         end if
           
         call SGI % WriteMultiVariable &
-               ( VG % Variable ( iVrbl ), TimeOption, CycleNumberOption )
+               ( S % Variable ( iVrbl ), TimeOption, CycleNumberOption )
         
       end do
       
-      call SGI % WriteVectorVariable ( VG )
+      call SGI % WriteVectorVariable ( S )
       
       call SGI % Stream % ChangeDirectory ( '../' )
       
@@ -868,10 +860,10 @@ contains
 
     nullify ( Value_PG, Value_PGF )
 
-  end subroutine WriteVariableGroup 
+  end subroutine WriteStorage 
   
   
-  subroutine ReadVariableGroup ( SGI ) 
+  subroutine ReadStorage ( SGI ) 
 
     class ( StructuredGridImageForm ), intent ( inout ) :: &
       SGI
@@ -879,8 +871,8 @@ contains
     integer ( KDI ) :: &
       iV, &      !-- iValue
       iVrbl, &   !-- iVariable
-      iG, &      !-- iSelected
-      iS, &      !-- iGroup
+      iStrg, &      !-- iSelected
+      iS, &      !-- iStorage
       iA, &      !-- iArray
       oV, &
       nProperCells
@@ -902,27 +894,27 @@ contains
 
     MeshDirectory = SGI % Stream % CurrentDirectory
   
-    do iG = 1, SGI % nVariableGroups
+    do iStrg = 1, SGI % nStorages
     
-      associate ( VG => SGI % VariableGroup ( iG ), &
+      associate ( S => SGI % Storage ( iStrg ), &
                   nDims => SGI % nDimensions )
   
-      call Show ( 'Reading a VariableGroup', CONSOLE % INFO_5 )
-      call Show ( iG, 'iGroup', CONSOLE % INFO_5 )
-      call Show ( VG % Name, 'Name', CONSOLE % INFO_5 )
+      call Show ( 'Reading a Storage', CONSOLE % INFO_5 )
+      call Show ( iStrg, 'iStorage', CONSOLE % INFO_5 )
+      call Show ( S % Name, 'Name', CONSOLE % INFO_5 )
 
-      if ( len_trim ( VG % Name ) > 0 ) &
-        call SGI % Stream % ChangeDirectory ( VG  % Name ) 
+      if ( len_trim ( S % Name ) > 0 ) &
+        call SGI % Stream % ChangeDirectory ( S  % Name ) 
     
       DB_File &
         = SGI % Stream % AccessSiloPointer ( SGI % Stream % MeshBlockHandle )
       
       SetSizes = .true. 
       
-      do iS = 1, VG % nVariables
+      do iS = 1, S % nVariables
       
-        iVrbl = VG % iaSelected ( iS )
-        VariableName = trim ( VG % Variable ( iVrbl ) ) // c_null_char
+        iVrbl = S % iaSelected ( iS )
+        VariableName = trim ( S % Variable ( iVrbl ) ) // c_null_char
 
         DB_QV_Handle = DB_GetQuadVariable ( DB_File, VariableName )
         call c_f_pointer ( DB_QV_Handle, DB_QV )
@@ -930,6 +922,7 @@ contains
         call c_f_pointer ( DB_QV % Value, ValueArrays, [ DB_QV % nValues ] )
         
         if ( SetSizes ) then
+          SGI % nCells = 1
           SGI % nCells ( 1 : nDims ) &
             = DB_QV % nElementsPerDimension ( 1 : nDims ) 
           SGI % nTotalCells = product ( SGI % nCells )
@@ -955,15 +948,15 @@ contains
                  ( ValueArrays ( iA ), VariableValue, [ DB_QV % nElements ] )
           if ( allocated ( SGI % PillarHash ) ) then
             do iV = 1, DB_QV % nElements
-              VG % Value &
+              S % Value &
                 ( SGI % oValue + SGI % PillarHash ( oV + iV ), iVrbl ) &
-                = VariableValue ( oV + iV ) * VG % Unit ( iVrbl ) % Number
+                = VariableValue ( oV + iV ) * S % Unit ( iVrbl ) % Number
             end do
           else
             call Copy &
                    ( VariableValue ( oV + 1 : ) &
-                       * VG % Unit ( iVrbl ) % Number, &
-                     VG % Value ( SGI % oValue + oV + 1 &
+                       * S % Unit ( iVrbl ) % Number, &
+                     S % Value ( SGI % oValue + oV + 1 &
                                   : SGI % oValue + oV + DB_QV % nElements, &
                                   iVrbl ) )                                
           end if
@@ -973,7 +966,7 @@ contains
       
       end do
   
-      if ( len_trim ( VG % Name ) > 0 ) &
+      if ( len_trim ( S % Name ) > 0 ) &
         call SGI % Stream % ChangeDirectory ( '../' ) 
     
       end associate 
@@ -987,7 +980,7 @@ contains
     nullify ( ValueArrays )
     nullify ( DB_QV )
 
-  end subroutine ReadVariableGroup
+  end subroutine ReadStorage
 
 
 end module StructuredGridImage_Form

@@ -1,6 +1,7 @@
 program GetMemoryUsage_Command_Test
 
-  use VariableManagement
+  use Specifiers
+  use DataManagement
   use Display
   use MessagePassing
   use CommandLineOptions_Form
@@ -9,7 +10,7 @@ program GetMemoryUsage_Command_Test
   implicit none
   
   integer ( KDI ) :: &
-    iG, &
+    iStrg, &
     nValues, &
     DisplayRank
   type ( MeasuredValueForm ) :: &
@@ -21,7 +22,7 @@ program GetMemoryUsage_Command_Test
     AcrossProcessesMinResidentSetSize, &
     AcrossProcessesMaxResidentSetSize, &
     AcrossProcessesMeanResidentSetSize
-  type ( VariableGroupForm ), dimension ( 10 ) :: &
+  type ( StorageForm ), dimension ( 10 ) :: &
     Dummy
   type ( CommunicatorForm ), allocatable :: &
     C
@@ -44,16 +45,16 @@ program GetMemoryUsage_Command_Test
   call CLO % Read ( nValues, 'nValues' )
   call Show ( nValues, 'nValues' )
   
-  do iG = 1, size ( Dummy ) 
-    call Dummy ( iG ) % Initialize ( [ nValues, C % Rank + 1 ] )
-    call random_number ( Dummy ( iG ) % Value )
+  do iStrg = 1, size ( Dummy ) 
+    call Dummy ( iStrg ) % Initialize ( [ nValues, C % Rank + 1 ] )
+    call random_number ( Dummy ( iStrg ) % Value )
   end do
   
   !-- get memory usage
   
   call Show ( 'Getting memory usage', CONSOLE % INFO_1 )
   call GetMemoryUsage &
-         ( HighWaterMark, ResidentSetSize, C_Option = C, &
+         ( HighWaterMark, ResidentSetSize, CONSOLE % INFO_1, C_Option = C, &
            Max_HWM_Option = AcrossProcessesMaxHighWaterMark, &
            Min_HWM_Option = AcrossProcessesMinHighWaterMark, &
            Mean_HWM_Option = AcrossProcessesMeanHighWaterMark, &

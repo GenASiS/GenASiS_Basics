@@ -1,6 +1,6 @@
 program CollectiveOperation_Form_Test
 
-  use VariableManagement
+  use Specifiers
   use Display
   use MessagePassingBasics
   use REDUCTION_Singleton
@@ -12,8 +12,12 @@ program CollectiveOperation_Form_Test
   implicit none
 
   integer ( KDI ) :: &
-    iV, &
+    iV, jV, &  !-- iValue, etc.
+    iB, &      !-- iBuffer
     nOutgoing
+  integer ( KDI ), dimension ( : ), allocatable :: &
+    nOutgoing_V, &
+    nIncoming_V
   complex ( KDC ) :: &
     ComplexValue
   type ( CommunicatorForm ), allocatable :: &
@@ -60,11 +64,11 @@ program CollectiveOperation_Form_Test
 
   allocate ( CO_I ) 
   call CO_I % Initialize &
-         ( C, nOutgoing = [ nOutgoing ], nIncoming = C % Size * [ nOutgoing ] ) 
+         ( C, nOutgoing = [ nOutgoing ], nIncoming = [ C % Size * nOutgoing ] ) 
            
   CO_I % Outgoing % Value &
     = ( C % Rank + 1 ) * [ ( iV, iV = 1, nOutgoing ) ]
-             
+
   call CO_I % Gather ( )
   
   call Show ( CO_I % Incoming % Value, 'IncomingValue_1D Integer' )
@@ -77,7 +81,7 @@ program CollectiveOperation_Form_Test
 
   allocate ( CO_BI ) 
   call CO_BI % Initialize &
-         ( C, nOutgoing = [ nOutgoing ], nIncoming = C % Size * [ nOutgoing ] ) 
+         ( C, nOutgoing = [ nOutgoing ], nIncoming = [ C % Size * nOutgoing ] ) 
            
   CO_BI % Outgoing % Value &
     = int ( C % Rank + 1, KBI ) * [ ( iV, iV = 1, nOutgoing ) ]
@@ -94,7 +98,7 @@ program CollectiveOperation_Form_Test
 
   allocate ( CO_R ) 
   call CO_R % Initialize &
-         ( C, nOutgoing = [ nOutgoing ], nIncoming = C % Size * [ nOutgoing ] ) 
+         ( C, nOutgoing = [ nOutgoing ], nIncoming = [ C % Size * nOutgoing ] ) 
            
   CO_R % Outgoing % Value &
     = ( acos ( - 1.0_KDR ) * ( C % Rank + 1 ) * [ ( iV, iV = 1, nOutgoing ) ] )
@@ -111,7 +115,7 @@ program CollectiveOperation_Form_Test
 
   allocate ( CO_R ) 
   call CO_R % Initialize &
-         ( C, nOutgoing = [ nOutgoing ], nIncoming = C % Size * [ nOutgoing ], &
+         ( C, nOutgoing = [ nOutgoing ], nIncoming = [ C % Size * nOutgoing ], &
            RootOption = CONSOLE % DisplayRank ) 
            
   CO_R % Outgoing % Value &
@@ -129,8 +133,8 @@ program CollectiveOperation_Form_Test
 
   allocate ( CO_C ) 
   call CO_C % Initialize & 
-         ( C, nOutgoing = [ nOutgoing ] * C % Size, &
-           nIncoming = [ nOutgoing ] * C % Size )
+         ( C, nOutgoing = [ nOutgoing * C % Size ], &
+           nIncoming = [ nOutgoing * C % Size ] )
 
   ComplexValue &
     = cmplx ( ( C % Rank + 1 ) * 1.0_KDR, &
@@ -143,8 +147,35 @@ program CollectiveOperation_Form_Test
   call Show ( CO_C % Incoming % Value, 'IncomingValue_1D Complex' )
 
   deallocate ( CO_C ) 
-    
-  !-- Reduction
+
+  !-- AllToAll_V Real
+
+  call Show ( 'AllToAll_V Real' )
+
+  allocate ( CO_R )
+  allocate ( nOutgoing_V ( C % Size ), nIncoming_V ( C % Size ) )
+  nOutgoing_V = [ ( iV, iV = 1, C % Size ) ]
+  nIncoming_V = [ ( nOutgoing_V ( C % Rank + 1 ), iV = 1, C % Size ) ]
+  call Show ( nOutgoing_V, 'nOutgoing_V' )
+  call Show ( nIncoming_V, 'nIncoming_V' )
+  call CO_R % Initialize ( C, nOutgoing = nOutgoing_V, nIncoming = nIncoming_V )
+
+  iB = 0
+  do iV = 1, C % Size
+    do jV = 1, iV
+      iB = iB + 1
+      CO_R % Outgoing % Value ( iB ) = ( C % Rank + 1 )  *  10 ** ( iV - 1 )
+    end do
+  end do
+  call Show ( CO_R % Outgoing % Value, 'OutgoingValue_1D Real' )
+
+  call CO_R % AllToAll_V ( )
+
+  call Show ( CO_R % Incoming % Value, 'IncomingValue_1D Real' )
+
+  deallocate ( CO_R )
+
+  !-- AllReduce Real
 
   call Show ( 'AllReduce Real' )
 

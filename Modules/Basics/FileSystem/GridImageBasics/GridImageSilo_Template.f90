@@ -5,7 +5,8 @@
 module GridImageSilo_Template
 
   use iso_c_binding
-  use VariableManagement
+  use Specifiers
+  use DataManagement
   use Display
   use GridImageStream_Form
   use DB_QuadMeshType_Silo_C
@@ -51,7 +52,7 @@ module GridImageSilo_Template
   abstract interface 
   
     subroutine SetReadAttributesInterface ( GI, Directory, oValue )
-      use VariableManagement
+      use Specifiers
       import GridImageSiloTemplate
       class ( GridImageSiloTemplate ), intent ( inout ) :: &
         GI  
@@ -62,7 +63,7 @@ module GridImageSilo_Template
     end subroutine
     
     subroutine WriteInterface ( GI, TimeOption, CycleNumberOption )
-      use VariableManagement
+      use Specifiers
       import GridImageSiloTemplate
       class ( GridImageSiloTemplate ), intent ( inout ) :: &
         GI
@@ -73,7 +74,7 @@ module GridImageSilo_Template
     end subroutine WriteInterface
     
     subroutine ReadInterface ( GI, TimeOption, CycleNumberOption )
-      use VariableManagement
+      use Specifiers
       import GridImageSiloTemplate
       class ( GridImageSiloTemplate ), intent ( inout ) :: &
         GI
@@ -325,12 +326,12 @@ contains
   end subroutine WriteMultiVariable
   
   
-  subroutine WriteVectorVariable ( GI, VG )
+  subroutine WriteVectorVariable ( GI, S )
   
     class ( GridImageSiloTemplate ), intent ( inout ) :: &
       GI
-    class ( VariableGroupForm ), intent ( in ) :: &
-      VG
+    class ( StorageForm ), intent ( in ) :: &
+      S
     
     integer ( KDI ) :: &
       iD, &
@@ -342,49 +343,49 @@ contains
       lVectorDefinition
     character ( LDB ), dimension ( : ), allocatable :: &
       VectorName, &
-      VectorDefinition
+      VectorDefinition, &
+      Scratch
+    
     
     if ( .not. GI % Stream % IsWritable ( CheckMultiMeshOption = .true. ) ) &
       return
     
-    if ( VG % nVectors == 0 ) return
+    if ( S % nVectors == 0 ) return
     
-    allocate ( VectorName ( VG % nVectors ) )
-    allocate ( VectorDefinition ( VG % nVectors ) )
-    allocate ( lVectorName ( VG % nVectors ) )
-    allocate ( lVectorDefinition ( VG % nVectors ) )
+    allocate ( VectorName ( S % nVectors ) )
+    allocate ( VectorDefinition ( S % nVectors ) )
+    allocate ( lVectorName ( S % nVectors ) )
+    allocate ( lVectorDefinition ( S % nVectors ) )
+    
+    allocate ( Scratch ( GI % nDimensions ) )
     
     oS = 0
     if ( GI % Stream % CurrentDirectory ( 1 : 1 ) == '/' ) oS = 1
-
-    do iVctr = 1, VG % nVectors
-      !-- FIXME: Setting iD = 1 to avoid gfortran compiler bug 
-      !          that trips runtime array bound-checking eventhough
-      !          iD is set in the implicit do-loop
-      iD = 1
-      call Join &
-             ( [ ( '<' &
-                   // trim ( GI % Stream % CurrentDirectory ( oS + 1 : ) ) &
-                   // trim ( VG % Variable ( VG % VectorIndices ( iVctr ) &
-                                                % Value ( iD ) ) ) &
-                   // '>', iD = 1, GI % nDimensions ) ], &
-               ',', VectorDefinition ( iVctr ) )
+    
+    do iVctr = 1, S % nVectors
+      !-- FIXME: XL compiler has trouble using implicit do loop
+      do iD = 1, GI % nDimensions
+        Scratch ( iD ) &
+          = ( '<' // trim ( GI % Stream % CurrentDirectory ( oS + 1 : ) ) &
+              // trim ( S % Variable ( S % VectorIndices ( iVctr ) &
+                                         % Value ( iD ) ) ) // '>' )
+      end do
+      call Join ( Scratch , ',', VectorDefinition ( iVctr ) ) 
       VectorDefinition ( iVctr ) &
         = '{' // trim ( VectorDefinition ( iVctr ) ) // '}'
       lVectorDefinition ( iVctr ) = len_trim ( VectorDefinition ( iVctr ) )
       VectorName ( iVctr ) &
         = trim ( GI % Stream % CurrentDirectory ( oS + 1 : ) ) &
-            // trim ( VG % Vector ( iVctr ) )
+            // trim ( S % Vector ( iVctr ) )
       lVectorName ( iVctr ) = len_trim ( VectorName ( iVctr ) )
     end do
-    
     Error = DBSET2DSTRLEN ( LDB )
     Error = DBPUTDEFVARS &
-              ( GI % Stream % MultiMeshHandle, trim ( VG % Name ), &
-                VG % lName, VG % nVectors, VectorName, lVectorName, &
-                [ ( DB_VARTYPE_VECTOR, iVctr = 1, VG % nVectors ) ], &
+              ( GI % Stream % MultiMeshHandle, trim ( S % Name ), &
+                S % lName, S % nVectors, VectorName, lVectorName, &
+                [ ( DB_VARTYPE_VECTOR, iVctr = 1, S % nVectors ) ], &
                 VectorDefinition, lVectorDefinition, &
-                [ ( DB_F77NULL, iVctr = 1, VG % nVectors ) ], Error )
+                [ ( DB_F77NULL, iVctr = 1, S % nVectors ) ], Error )
    
   end subroutine WriteVectorVariable
   

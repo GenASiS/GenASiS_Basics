@@ -3,7 +3,7 @@
 
 module CommandLineOptions_Form
   
-  use VariableManagement
+  use Specifiers
   use FileSystem
 
   implicit none
@@ -199,7 +199,7 @@ contains
       IgnorabilityOption
     logical ( KDL ), intent ( out ), optional :: &
       SuccessOption
-    
+
     call FindParameter &
            ( Value, CLO % Option, 'command line', Name, nValuesOption, &
              IgnorabilityOption, SuccessOption )

@@ -3,7 +3,7 @@
 
 module ParameterStream_Form
   
-  use VariableManagement
+  use Specifiers
   use Display
   use DelayFileAccess_Command
   use FindParameter_Command
@@ -16,8 +16,9 @@ module ParameterStream_Form
 
   type, public :: ParameterStreamForm
     integer ( KDI ) :: &
-      Handle      = HANDLE_UNINITIALIZED, &
-      ProcessRank =  0
+      IGNORABILITY = 0, &
+      Handle       = HANDLE_UNINITIALIZED, &
+      ProcessRank  = 0
     character ( LDF ) :: &
       Filename = '', &
       Path     = ''
@@ -64,7 +65,8 @@ contains
   
   
   subroutine Initialize &
-               ( PS, Filename, ProcessRank, PathOption, nLinesOption )
+               ( PS, Filename, ProcessRank, PathOption, IgnorabilityOption, &
+                 nLinesOption )
     
     class ( ParameterStreamForm ), intent ( inout ) :: &
       PS
@@ -75,6 +77,7 @@ contains
     character ( * ), intent ( in ), optional :: &
       PathOption
     integer ( KDI ), intent ( in ), optional :: &
+      IgnorabilityOption, &
       nLinesOption
     
     integer ( KDI ) :: &
@@ -84,7 +87,11 @@ contains
     character ( LDB ) :: &
       ErrorMessage, &
       Dummy
-    
+
+    PS % IGNORABILITY = CONSOLE % INFO_2
+    if ( present ( IgnorabilityOption ) ) &
+      PS % IGNORABILITY = IgnorabilityOption
+
     PS % ProcessRank = ProcessRank
 
     PS % Filename = trim ( Filename )
@@ -92,8 +99,8 @@ contains
     PS % Path = '../Parameters/'
     if ( present ( PathOption ) ) PS % Path = trim ( PathOption )
     
-    call Show ( 'Opening a parameter file', CONSOLE % INFO_2 )
-    call Show ( PS % Filename, 'Name', CONSOLE % INFO_2 )
+    call Show ( 'Opening a parameter file', PS % IGNORABILITY )
+    call Show ( PS % Filename, 'Name', PS % IGNORABILITY )
     
     call DelayFileAccess ( ProcessRank )
     open &
@@ -105,7 +112,7 @@ contains
     if ( Status /= 0 ) then
       PS % Handle = HANDLE_UNINITIALIZED
       allocate ( PS % Buffer ( 0 ) )
-      call Show ( ErrorMessage, CONSOLE % WARNING )
+      call Show ( ErrorMessage, PS % IGNORABILITY )
       return
     end if
 
@@ -378,10 +385,8 @@ contains
     
     if ( PS % Handle == HANDLE_UNINITIALIZED ) return
     
-    call Show &
-           ( 'Closing a parameter file', CONSOLE % INFO_2 )
-    call Show &
-           ( PS % Filename, 'Name', CONSOLE % INFO_2 )
+    call Show ( 'Closing a parameter file', PS % IGNORABILITY )
+    call Show ( PS % Filename, 'Name', PS % IGNORABILITY )
 
     if ( allocated ( PS % Buffer ) ) deallocate ( PS % Buffer )
     

@@ -57,6 +57,9 @@ contains
     type is ( PolytropicFluidForm )
 
     call PF % Initialize ( DM, NameOption = 'PolytropicFluid' )
+    call PF % AllocateDevice ( )
+    
+    call DM % SetGhostExchange ( PF )
 
     !-- Left and Right states
 
@@ -198,6 +201,8 @@ contains
            ( VelocityUnitOption = spread ( SpeedUnit, 1, 3 ), &
              DensityUnitOption = DensityUnit, EnergyUnitOption = EnergyUnit )
 
+    call PF % UpdateDevice ( )
+    
     end associate !-- X, etc.
     end select !-- PF
     end associate !-- DM

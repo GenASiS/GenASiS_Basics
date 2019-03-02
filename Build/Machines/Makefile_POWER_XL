@@ -1,0 +1,37 @@
+# Makefile for Summit XL compiler 
+
+FORTRAN_COMPILE      = mpifort -c -qpreprocess -qsmp=omp
+FORTRAN_BOUND_CHECK  = -qcheck=bounds
+FORTRAN_DEBUG        = -g -qsigtrap #-Wall
+FORTRAN_OPTIMIZE     = -Ofast
+FORTRAN_PROFILE      = 
+
+CC_COMPILE           = mpicc -c -qsmp=omp
+CC_DEBUG             = -g
+CC_OPTIMIZE          = $(FORTRAN_OPTIMIZE)
+
+NVCC_COMPILE         = nvcc -c
+
+LINK = mpifort -qsmp=omp 
+
+LINK_NVCC = nvcc
+
+#SILO_DIR = /ccs/home/reubendb/projects/swtree/peak/silo/4.10.2/xl2017
+SILO_DIR = /sw/peak/caascade/silo/4.10.2/xl20180502
+INCLUDE_SILO = -I${SILO_DIR}/include
+LIBRARY_SILO = -L${SILO_DIR}/lib -lsilo
+
+ifeq ($(ENABLE_OMP_OFFLOAD), 1)
+INCLUDE_CUDA = -I${OLCF_CUDA_ROOT}/include
+LIBRARY_CUDA = -L${OLCF_CUDA_ROOT}/lib64 -lcudart
+endif
+
+INCLUDE_PREPROCESSOR = -I$(PATH_GENASIS)/Build
+
+#-- Enable unicode
+USE_ISO_10646 = 
+
+#-- default to use OpenMP offload for this makefile
+ifneq ($(ENABLE_OMP_OFFLOAD), 0)
+  DEFINES = -DENABLE_OMP_OFFLOAD -qoffload
+endif

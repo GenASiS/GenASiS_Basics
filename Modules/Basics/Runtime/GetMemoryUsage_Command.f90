@@ -4,7 +4,8 @@
 module GetMemoryUsage_Command
   
   use MPI
-  use VariableManagement
+  use Specifiers
+  use DataManagement
   use Display
   use MessagePassing
 
@@ -26,15 +27,17 @@ contains
 
 
   subroutine GetMemoryUsage &
-               ( HWM, RSS, C_Option, Max_HWM_Option, Min_HWM_Option, &
-                 Mean_HWM_Option, Max_RSS_Option, Min_RSS_Option, &
-                 Mean_RSS_Option )
+               ( HWM, RSS, Ignorability, C_Option, Max_HWM_Option, &
+                 Min_HWM_Option, Mean_HWM_Option, Max_RSS_Option, &
+                 Min_RSS_Option, Mean_RSS_Option )
     
     type ( MeasuredValueForm ), intent ( out ) :: &
       HWM, &
       RSS
+    integer ( KDI ), intent ( in ) :: &
+      Ignorability
     type ( CommunicatorForm ), intent ( in ), optional :: &
-      C_Option 
+      C_Option
     type ( MeasuredValueForm ), intent ( out ), optional :: &
       Max_HWM_Option, &
       Min_HWM_Option, &
@@ -73,14 +76,14 @@ contains
     if ( .not. MemoryInfoFileExists ) then
       call Show &
              ( 'Memory info file does not exist on this system', &
-               CONSOLE % WARNING )
+               Ignorability )
       return
     end if
      
     open ( FileUnit, file = MEMORY_INFO_FILE, iostat = Status )
     
     if ( Status /= 0 ) then
-      call Show ( 'Failure in opening memory info file', CONSOLE % WARNING )
+      call Show ( 'Failure in opening memory info file', Ignorability )
       return
     end if
      

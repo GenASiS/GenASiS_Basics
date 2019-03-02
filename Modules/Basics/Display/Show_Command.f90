@@ -3,14 +3,16 @@
 
 module Show_Command
 
-  use VariableManagement
+  use iso_c_binding
+  use Specifiers
   use CONSOLE_Singleton
  
   implicit none
   private
 
   public :: &
-    Show
+    Show, &
+    ShowCharacter_KBCH
 
   interface Show
     module procedure ShowInteger
@@ -35,8 +37,11 @@ module Show_Command
     module procedure ShowLogical
     module procedure ShowLogical_1D
     module procedure ShowCharacter
+!    module procedure ShowCharacter_KBCH
     module procedure ShowCharacterNoDescription
     module procedure ShowCharacter_1D
+    module procedure Show_C_Pointer
+    module procedure Show_C_Pointer_1D
     module procedure ShowMeasuredValue
     module procedure ShowMeasuredValueConvertUnit
     module procedure ShowMeasuredValue_1D
@@ -614,8 +619,13 @@ contains
     type ( MeasuredValueForm ) :: &
       MV
     
-    call MV % Initialize ( Unit % Label, Real / Unit % Number )
-    
+    if ( KBCH > KDCH ) then
+      call MV % Initialize_UCS &
+             ( Unit % Label_UCS, Unit % Label, Real / Unit % Number )
+    else
+      call MV % Initialize ( Unit % Label, Real / Unit % Number )
+    end if
+  
     call Show &
            ( MV, Description, IgnorabilityOption, DisplayRankOption, &
              nLeadingLinesOption, nTrailingLinesOption )
@@ -653,8 +663,13 @@ contains
     allocate ( MV ( size ( Real ) ) )
     
     do iV = 1, size ( Real )
-      call MV ( iV ) % Initialize &
-             ( Unit % Label, Real ( iV ) / Unit % Number )
+      if ( KBCH > KDCH ) then
+        call MV ( iV ) % Initialize_UCS &
+               ( Unit % Label_UCS, Unit % Label, Real ( iV ) / Unit % Number )
+      else
+        call MV ( iV ) % Initialize &
+               ( Unit % Label, Real ( iV ) / Unit % Number )
+      end if
     end do
     
     call Show &
@@ -690,8 +705,14 @@ contains
       MV
     
     do iV = 1, size ( Real )
-      call MV ( iV ) % Initialize &
-             ( Unit ( iV ) % Label, Real ( iV ) / Unit ( iV ) % Number )
+      if ( KBCH > KDCH ) then
+        call MV ( iV ) % Initialize_UCS &
+               ( Unit ( iV ) % Label_UCS, Unit ( iV ) % Label, &
+                 Real ( iV ) / Unit ( iV ) % Number )
+      else
+        call MV ( iV ) % Initialize &
+               ( Unit ( iV ) % Label, Real ( iV ) / Unit ( iV ) % Number )
+      end if
     end do
     
     call Show &
@@ -963,6 +984,37 @@ contains
   end subroutine ShowCharacter
   
   
+  subroutine ShowCharacter_KBCH &
+               ( Character, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
+
+    character ( *, KBCH ), intent ( in ) :: &
+      Character
+    character ( * ), intent ( in ) :: &
+      Description
+    integer ( KDI ), intent ( in ), optional :: &
+      IgnorabilityOption, &
+      DisplayRankOption, &
+      nLeadingLinesOption, &
+      nTrailingLinesOption
+
+    logical( KDL ) :: &
+      AbortShow
+    
+    call PrepareShow &
+           ( AbortShow, IgnorabilityOption, DisplayRankOption, &
+             nLeadingLinesOption )
+
+    if ( AbortShow ) return
+
+    print '(a35,a,a)', trim ( Description ), '  =  ', trim ( Character )
+
+    call EndShow ( nTrailingLinesOption )
+
+  end subroutine ShowCharacter_KBCH
+  
+  
   subroutine ShowCharacterNoDescription &
                ( Character, IgnorabilityOption, DisplayRankOption, &
                  nLeadingLinesOption, nTrailingLinesOption )
@@ -1018,7 +1070,7 @@ contains
   subroutine ShowCharacter_1D &
                ( Character, Description, IgnorabilityOption, &
                  DisplayRankOption, nLeadingLinesOption, &
-                 nTrailingLinesOption )
+                 nTrailingLinesOption, oIndexOption )
 
     !-- Convention on argument order violated because the Character being
     !   "Show"n is more important than the Description.
@@ -1031,10 +1083,12 @@ contains
       IgnorabilityOption, &
       DisplayRankOption, &
       nLeadingLinesOption, &
-      nTrailingLinesOption
+      nTrailingLinesOption, &
+      oIndexOption
 
     integer ( KDI ) :: &
-      i
+      i, &
+      oIndex
     logical ( KDL ) :: &
       AbortShow
     character ( LDN ) :: &
@@ -1046,9 +1100,13 @@ contains
 
     if ( AbortShow ) return
 
+    oIndex = 0
+    if ( present ( oIndexOption ) ) &
+      oIndex = oIndexOption
+
     print '(a35)', trim ( Description )
     do i = 1, size ( Character )
-      write ( IndexLabel, fmt = '( i7 )' ) i
+      write ( IndexLabel, fmt = '( i7 )' ) oIndex + i
       print & 
         '(a40,a)', '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =  ', &
         trim ( Character ( i ) )
@@ -1057,6 +1115,101 @@ contains
     call EndShow ( nTrailingLinesOption )
 
   end subroutine ShowCharacter_1D
+
+
+  subroutine Show_C_Pointer &
+               ( Pointer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
+
+    !-- Convention on argument order violated because the Integer being
+    !   "Show"n is more important than the Description.
+
+    type ( c_ptr ), intent ( in ) :: &
+      Pointer
+    character ( * ), intent ( in ) :: &
+      Description
+    integer ( KDI ), intent ( in ), optional :: &
+      IgnorabilityOption, &
+      DisplayRankOption, &
+      nLeadingLinesOption, &
+      nTrailingLinesOption
+
+    integer ( KBI ) :: &
+      Address
+    logical( KDL ) :: &
+      AbortShow
+    character ( LDB ) :: &
+      Buffer
+    
+    call PrepareShow &
+           ( AbortShow, IgnorabilityOption, DisplayRankOption, &
+             nLeadingLinesOption )
+
+    if ( AbortShow ) return
+
+    Address = transfer ( Pointer, 1_KBI )
+    write ( Buffer, fmt = ' ( z64 ) ' ) Address
+    Buffer = '0x' //  adjustl ( Buffer )
+    
+    print '(a35,a3,a32)', trim ( Description ), '  = ', Buffer
+
+    call EndShow ( nTrailingLinesOption )
+
+  end subroutine Show_C_Pointer
+
+
+  subroutine Show_C_Pointer_1D &
+               ( Pointer, Description, IgnorabilityOption, &
+                 DisplayRankOption, nLeadingLinesOption, &
+                 nTrailingLinesOption )
+
+    !-- Convention on argument order violated because the Integer being
+    !   "Show"n is more important than the Description.
+
+    type ( c_ptr ), dimension ( : ), intent ( in ) :: &
+      Pointer
+    character ( * ), intent ( in ) :: &
+      Description
+    integer ( KDI ), intent ( in ), optional :: &
+      IgnorabilityOption, &
+      DisplayRankOption, &
+      nLeadingLinesOption, &
+      nTrailingLinesOption
+
+    integer ( KDI ) :: &
+      i
+    integer ( KBI ) :: &
+      Address
+    logical ( KDL ) :: &
+      AbortShow
+    character ( LDN ) :: &
+      IndexLabel
+    character ( LDB ) :: &
+      Buffer
+    
+    call PrepareShow &
+           ( AbortShow, IgnorabilityOption, DisplayRankOption, &
+             nLeadingLinesOption )
+
+    if ( AbortShow ) return
+
+    print '(a35)', trim ( Description )
+    do i = 1, size ( Pointer )
+      write ( IndexLabel, fmt = '( i7 )' ) i
+      
+      Address = transfer ( Pointer ( i ), 1_KBI )
+      write ( Buffer, fmt = ' ( z64 ) ' ) Address
+      Buffer = '0x' //  adjustl ( Buffer )
+      
+      print &
+        '(a38,a32)', &
+        '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) = ', Buffer
+    end do
+
+    call EndShow ( nTrailingLinesOption )
+
+  end subroutine Show_C_Pointer_1D
 
 
   subroutine ShowMeasuredValue &
@@ -1090,28 +1243,28 @@ contains
 
     if ( AbortShow ) return
 
-    if ( MeasuredValue % Label == '' ) then
+    if ( MeasuredValue % Label_UCS == KBCH_'' ) then
 
-      LenUnit = len_trim ( MeasuredValue % Unit ) + 1
+      LenUnit = len_trim ( MeasuredValue % Unit_UCS ) + 1
       write ( PrintFormat, fmt = '(a18,i0,a1)' ) &
         '(a35,a3,es15.6e3,a', LenUnit, ')'
     
       print trim ( PrintFormat ), &
-        trim ( Description ), '  =', MeasuredValue % Number, &
-        ' ' // trim ( MeasuredValue % Unit )
+        trim ( Description ), KBCH_'  =', MeasuredValue % Number, &
+        KBCH_' ' // trim ( MeasuredValue % Unit_UCS )
     
     else
 
       LenUnit &
-        = len_trim ( MeasuredValue % Unit ) + 1 &
-          + len_trim ( MeasuredValue % Label ) + 5
+        = len_trim ( MeasuredValue % Unit_UCS ) + 1 &
+          + len_trim ( MeasuredValue % Label_UCS ) + 5
       write ( PrintFormat, fmt = '(a18,i0,a2)' ) &
         '(a35,a3,es15.6e3,a', LenUnit, ')'
       
       print trim ( PrintFormat ), &
-        trim ( Description ), '  =', MeasuredValue % Number, &
-        ' ' // trim ( MeasuredValue % Unit ) &
-        // ' ( ' // trim ( MeasuredValue % Label ) // ' )'
+        trim ( Description ), KBCH_'  =', MeasuredValue % Number, &
+        KBCH_' ' // trim ( MeasuredValue % Unit_UCS ) &
+        // KBCH_' ( ' // trim ( MeasuredValue % Label_UCS ) // KBCH_' )'
 
     end if
 
@@ -1141,11 +1294,17 @@ contains
     type ( MeasuredValueForm ) :: &
       MV
     
-    call MV % Initialize ( Unit % Label, MV_Source % Number / Unit % Number )
-    
-    call Show &
-           ( MV, Description, IgnorabilityOption, DisplayRankOption, &
-             nLeadingLinesOption, nTrailingLinesOption )
+    if ( KBCH > KDCH ) then
+      call MV % Initialize_UCS &
+             ( Unit % Label_UCS, Unit % Label, &
+               MV_Source % Number / Unit % Number )
+    else
+      call MV % Initialize &
+             ( Unit % Label, MV_Source % Number / Unit % Number )
+    end if
+
+    call Show ( MV, Description, IgnorabilityOption, DisplayRankOption, &
+                nLeadingLinesOption, nTrailingLinesOption )
 
   end subroutine ShowMeasuredValueConvertUnit
   
@@ -1188,9 +1347,10 @@ contains
     
     do i = 1, size ( MeasuredValue )
 
-      if ( MeasuredValue ( i ) % Label == '' ) then
+      if ( MeasuredValue ( i ) % Label_UCS == KBCH_'' ) then
 
-        LenUnit = len_trim ( MeasuredValue ( i ) % Unit ) + 1
+        LenUnit &
+          = len_trim ( MeasuredValue ( i ) % Unit_UCS ) + 1
         write ( PrintFormat, fmt = '(a18,i0,a1)' ) &
           '(a38,es15.6e3,a', LenUnit, ')'
       
@@ -1199,13 +1359,13 @@ contains
           trim ( PrintFormat ), &
           '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', &
           MeasuredValue ( i ) % Number, &
-          ' ' // trim ( MeasuredValue ( i ) % Unit )
+          KBCH_' ' // trim ( MeasuredValue ( i ) % Unit_UCS )
 
       else
 
         LenUnit &
-          = len_trim ( MeasuredValue ( i ) % Unit ) + 1 &
-            + len_trim ( MeasuredValue ( i ) % Label ) + 5
+          = len_trim ( MeasuredValue ( i ) % Unit_UCS ) + 1 &
+            + len_trim ( MeasuredValue ( i ) % Label_UCS ) + 5
         write ( PrintFormat, fmt = '(a18,i0,a2)' ) &
           '(a38,es15.6e3,a', LenUnit, ')'
       
@@ -1214,8 +1374,9 @@ contains
           trim ( PrintFormat ), &
           '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', &
           MeasuredValue ( i ) % Number, &
-          ' ' // trim ( MeasuredValue ( i ) % Unit ) &
-          // ' ( ' // trim ( MeasuredValue ( i ) % Label ) // ' )'
+          KBCH_' ' // trim ( MeasuredValue ( i ) % Unit_UCS ) &
+          // KBCH_' ( ' // trim ( MeasuredValue ( i ) % Label_UCS ) &
+          // KBCH_' )'
 
       end if
     
@@ -1250,9 +1411,15 @@ contains
       MV
     
     do iMV = 1, size ( MV_Source )
-      call MV ( iMV ) % Initialize &
-             ( Unit ( iMV ) % Label, &
-               MV_Source ( iMV ) % Number / Unit ( iMV ) % Number )
+      if ( KBCH > KDCH ) then
+        call MV ( iMV ) % Initialize_UCS &
+               ( Unit ( iMV ) % Label_UCS, Unit ( iMV ) % Label, &
+                 MV_Source ( iMV ) % Number / Unit ( iMV ) % Number )
+      else
+        call MV ( iMV ) % Initialize &
+               ( Unit ( iMV ) % Label, &
+                 MV_Source ( iMV ) % Number / Unit ( iMV ) % Number )
+      end if
     end do
   
     call Show &
