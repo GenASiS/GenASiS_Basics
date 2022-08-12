@@ -14,8 +14,11 @@ module DistributedMesh_Form
       nDimensions  = 0, &
       nProperCells = 0, &
       nGhostCells  = 0
+    integer ( KDI ) :: &
+      iTimerPacking = -1, &
+      iTimerComm    = -1
     integer ( KDI ), private :: &
-      iTimer_IO
+      iTimer_IO     = 0
     integer ( KDI ), dimension ( MAX_N_DIMENSIONS ) :: &
       iaBrick, &
       iaFirst, &
@@ -31,9 +34,11 @@ module DistributedMesh_Form
       MaxCoordinate, &
       CellWidth, &
       CellArea
+    logical ( KDL ) :: &
+      DevicesCommunicate = .true.
     type ( Real_1D_Form ), dimension ( MAX_N_DIMENSIONS ) :: &
       Edge
-    type ( MeasuredValueForm ), dimension ( MAX_N_DIMENSIONS ) :: &
+    type ( QuantityForm ), dimension ( MAX_N_DIMENSIONS ) :: &
       CoordinateUnit
     character ( LDL ) :: &
       BoundaryCondition = 'PERIODIC'
@@ -54,11 +59,11 @@ module DistributedMesh_Form
     type ( MessageOutgoing_1D_R_Form ), allocatable :: &
       OutgoingPrevious, &
       OutgoingNext
-    type ( GridImageStreamForm ) :: &
+    type ( GridImageStreamForm ), private :: &
       GridImageStream
-    type ( CurveImageForm ) :: &
+    type ( CurveImageForm ), private :: &
       CurveImage
-    type ( StructuredGridImageForm ) :: &
+    type ( StructuredGridImageForm ), private :: &
       GridImage
   contains
     procedure, public, pass :: &
@@ -79,6 +84,8 @@ module DistributedMesh_Form
       SetImage
     procedure, public, pass :: &
       Write
+    procedure, public, pass :: &
+      Read
     final :: &
       Finalize
   end type DistributedMeshForm
@@ -101,12 +108,14 @@ module DistributedMesh_Form
 contains
 
 
-  subroutine Initialize ( DM, C, BoundaryConditionOption )
+  subroutine Initialize ( DM, C, UseDevice, BoundaryConditionOption )
 
     class ( DistributedMeshForm ), intent ( inout ) :: &
       DM
     type ( CommunicatorForm ), intent ( in ), target :: &
       C
+    logical ( KDL ), intent ( in ) :: &
+      UseDevice
     character ( * ), intent ( in ), optional :: &
       BoundaryConditionOption
 
@@ -121,7 +130,13 @@ contains
     
     if ( present ( BoundaryConditionOption ) ) &
       DM % BoundaryCondition = BoundaryConditionOption
-
+    
+    DM % DevicesCommunicate = .true.
+    call PROGRAM_HEADER % GetParameter &
+           ( DM % DevicesCommunicate, 'DevicesCommunicate' )
+    
+    DM % DevicesCommunicate = ( DM % DevicesCommunicate .and. UseDevice )
+           
     call ShowParameters ( DM )
     
   end subroutine Initialize
@@ -186,8 +201,11 @@ contains
     call DM % IncomingNext % Initialize &
            ( DM % Communicator, spread ( TAG_IN_NEXT, 1, PHN % nSources ), &
              PHN % Source, PHN % nChunksFrom * S_1D % nVariablesTotal )
-    !call DM % IncomingPrevious % AllocateDevice ( )
-    !call DM % IncomingNext % AllocateDevice ( )
+    
+    if ( DM % DevicesCommunicate ) then
+      call DM % IncomingPrevious % AllocateDevice ( )
+      call DM % IncomingNext % AllocateDevice ( )
+    end if
     
     call DM % OutgoingPrevious % Initialize &
            ( DM % Communicator, spread ( TAG_OUT_PREV, 1, PHP % nTargets ), &
@@ -195,8 +213,11 @@ contains
     call DM % OutgoingNext % Initialize &
            ( DM % Communicator, spread ( TAG_OUT_NEXT, 1, PHN % nTargets ), &
              PHN % Target, PHN % nChunksTo * S_1D % nVariablesTotal )
-    !call DM % OutgoingPrevious % AllocateDevice ( )
-    !call DM % OutgoingNext % AllocateDevice ( )
+    
+    if ( DM % DevicesCommunicate ) then
+      call DM % OutgoingPrevious % AllocateDevice ( )
+      call DM % OutgoingNext % AllocateDevice ( )
+    end if
     
     end associate
   
@@ -219,6 +240,9 @@ contains
       nSend
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V  !-- Variable
+    type ( TimerForm ), pointer :: &
+      T_C, &
+      T_P
 
     call Show ( 'Start Ghost Exchange', CONSOLE % INFO_6 )
 
@@ -226,12 +250,24 @@ contains
       ( S_1D  => DM % Storage, &
         PHP   => DM % PortalHeaderPrevious, &
         PHN   => DM % PortalHeaderNext )
-
+    
+    T_C => null ( )
+    T_P => null ( )
+    if ( DM % iTimerComm > 0 ) then
+      T_C => PROGRAM_HEADER % Timer &
+               ( DM % iTimerComm, 'Send/Recv', Level = 3 ) 
+      T_P => PROGRAM_HEADER % Timer &
+               ( DM % iTimerPacking, 'Pack/Unpack', Level = 3 )
+    end if  
+      
     !-- Post Receives
     
     call Show ( 'Post Receives', CONSOLE % INFO_7 )
+    
+    if ( associated ( T_C ) ) call T_C % Start ( )
     call DM % IncomingPrevious % Receive ( )
     call DM % IncomingNext % Receive ( )
+    if ( associated ( T_C ) ) call T_C % Stop ( )
 
     !-- Send to Previous
     
@@ -246,23 +282,24 @@ contains
       nSend ( iD ) = DM % nGhostLayers ( iD )
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
-
+      
+      if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
           iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
                  ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( V, nSend, oSend, oBuffer, &
-                      DM % OutgoingPrevious % Message ( iD ) % Value )
-          !call Copy ( V, nSend, oSend, oBuffer, &
-          !            S_1D % Storage ( iStrg ) % D_Selected ( iS ), &
-          !            DM % OutgoingPrevious % Message ( iD ) % D_Value, &
-          !            DM % OutgoingPrevious % Message ( iD ) % Value )
+                      DM % OutgoingPrevious % Message ( iD ) % Value, &
+                      UseDeviceOption = DM % DevicesCommunicate )
           oBuffer = oBuffer + product ( nSend )
         end do !-- iS
       end do !-- iStrg
+      if ( associated ( T_P ) ) call T_P % Stop ( )
 
+      if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % OutgoingPrevious % Send ( iD )
+      if ( associated ( T_C ) ) call T_C % Stop ( )
 
     end do !-- iD
 
@@ -281,27 +318,29 @@ contains
       nSend ( iD ) = DM % nGhostLayers ( iD )
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
-
+      
+      if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
           iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
                  ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( V, nSend, oSend, oBuffer, &
-                      DM % OutgoingNext % Message ( iD ) % Value )
-          !call Copy ( V, nSend, oSend, oBuffer, &
-          !            S_1D % Storage ( iStrg ) % D_Selected ( iS ), &
-          !            DM % OutgoingNext % Message ( iD ) % D_Value, &
-          !            DM % OutgoingNext % Message ( iD ) % Value )
+                      DM % OutgoingNext % Message ( iD ) % Value, &
+                      UseDeviceOption = DM % DevicesCommunicate )
           oBuffer = oBuffer + product ( nSend )
         end do !-- iS
       end do !-- iStrg
+      if ( associated ( T_P ) ) call T_P % Stop ( )
 
+      if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % OutgoingNext % Send ( iD )
+      if ( associated ( T_C ) ) call T_C % Stop ( )
 
     end do !-- iD
-
+    
     nullify ( V )
+    
     end associate !-- S_1D, etc.
 
   end subroutine StartGhostExchange
@@ -323,10 +362,23 @@ contains
       nReceive
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V  !-- Variable
+    type ( TimerForm ), pointer :: &
+      T_C, &
+      T_P
 
     call Show ( 'Finish Ghost Exchange', CONSOLE % INFO_6 )
 
     associate ( S_1D  => DM % Storage )
+    
+    T_C => null ( )
+    T_P => null ( )
+    
+    if ( DM % iTimerComm > 0 ) then
+      T_C => PROGRAM_HEADER % Timer &
+               ( DM % iTimerComm, 'Send/Recv', Level = 3 ) 
+      T_P => PROGRAM_HEADER % Timer &
+               ( DM % iTimerPacking, 'Pack/Unpack', Level = 3 )
+    end if
 
     !-- Receive from Next
 
@@ -341,22 +393,23 @@ contains
       nReceive ( jD ) = DM % nCellsPerBrick ( jD )
       nReceive ( kD ) = DM % nCellsPerBrick ( kD )
 
+      if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % IncomingNext % Wait ( iD )
+      if ( associated ( T_C ) ) call T_C % Stop ( )
 
+      if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
           iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
                  ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( DM % IncomingNext % Message ( iD ) % Value, &
-                      nReceive, oReceive, oBuffer, V )
-          !call Copy ( DM % IncomingNext % Message ( iD ) % Value, &
-          !            nReceive, oReceive, oBuffer, &
-          !            DM % IncomingNext % Message ( iD ) % D_Value, &
-          !            S_1D % Storage ( iStrg ) % D_Selected ( iS ), V )
+                      nReceive, oReceive, oBuffer, V, &
+                      UseDeviceOption = DM % DevicesCommunicate )
           oBuffer = oBuffer + product ( nReceive )
         end do !-- iS
       end do !-- iStrg
+      if ( associated ( T_P ) ) call T_P % Stop ( )
       
     end do !-- iD
 
@@ -373,42 +426,46 @@ contains
       nReceive ( jD ) = DM % nCellsPerBrick ( jD )
       nReceive ( kD ) = DM % nCellsPerBrick ( kD )
 
+      if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % IncomingPrevious % Wait ( iD )
+      if ( associated ( T_C ) ) call T_C % Stop ( )
 
+      if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
           iV = S_1D % Storage ( iStrg ) % iaSelected ( iS )
           call DM % SetVariablePointer &
                  ( S_1D % Storage ( iStrg ) % Value ( :, iV ), V ) 
           call Copy ( DM % IncomingPrevious % Message ( iD ) % Value, &
-                      nReceive, oReceive, oBuffer, V )
-          !call Copy ( DM % IncomingPrevious % Message ( iD ) % Value, &
-          !            nReceive, oReceive, oBuffer, &
-          !            DM % IncomingPrevious % Message ( iD ) % D_Value, &
-          !            S_1D % Storage ( iStrg ) % D_Selected ( iS ), V )
+                      nReceive, oReceive, oBuffer, V, &
+                      UseDeviceOption = DM % DevicesCommunicate )
           oBuffer = oBuffer + product ( nReceive )
         end do !-- iS
       end do !-- iStrg
+      if ( associated ( T_P ) ) call T_P % Stop ( )
       
     end do !-- iD
 
     !-- Cleanup
-
+    
+    if ( associated ( T_C ) ) call T_C % Start ( )
     call DM % OutgoingPrevious % Wait ( )
     call DM % OutgoingNext % Wait ( )
+    if ( associated ( T_C ) ) call T_C % Stop ( )
 
     nullify ( V )
+    
     end associate !-- S_1D
 
   end subroutine FinishGhostExchange
 
 
-  subroutine SetImage ( DM, S, Name )
+  subroutine SetImage ( DM, Output, Name )
 
     class ( DistributedMeshForm ), intent ( inout ) :: &
       DM
     class ( StorageForm ), dimension ( : ), intent ( in ) :: &
-      S
+      Output
     character ( * ), intent ( in ) :: &
       Name
 
@@ -425,15 +482,20 @@ contains
       Edge
     character ( LDF ) :: &
       OutputDirectory
+    type ( TimerForm ), pointer :: &
+      T_IO
 
+    T_IO  =>  PROGRAM_HEADER % Timer &
+                ( DM % iTimer_IO, 'InputOutput', Level = 1 )
+    call T_IO % Start ( )
+
+    !-- Output
     OutputDirectory = '../Output/'
-    call PROGRAM_HEADER % GetParameter ( OutputDirectory, 'OutputDirectory' )
+    call PROGRAM_HEADER % GetParameter &
+          ( OutputDirectory, 'OutputDirectory' )
     
-    call PROGRAM_HEADER % AddTimer ( 'InputOutput', DM % iTimer_IO, Level = 1 )
-    
-    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Start ( )
-
     associate ( GIS => DM % GridImageStream )
+           
     call GIS % Initialize &
            ( Name, CommunicatorOption = DM % Communicator, &
              WorkingDirectoryOption = OutputDirectory )
@@ -462,30 +524,32 @@ contains
     end do !-- iD
     
     select case ( DM % nDimensions )
-    case ( 1 ) 
 
+    case ( 1 ) 
+      
       associate ( CI => DM % CurveImage )
       call CI % Initialize ( GIS )
-      call CI % SetGrid &
+      call CI % SetGridWrite &
              ( 'Curves', Edge ( 1 ), DM % nProperCells, &
                oValue = nGhostInner ( 1 ) + nExteriorInner ( 1 ), &
                CoordinateUnitOption = DM % CoordinateUnit ( 1 ) )
-      do iS = 1, size ( S )
-        call CI % AddStorage ( S ( iS ) )
+      do iS = 1, size ( Output )
+        call CI % AddStorage ( Output ( iS ) )
       end do
       end associate !-- CI
-
+      
     case default
 
+      !-- Output
       associate ( GI => DM % GridImage )
       call GI % Initialize ( GIS ) 
-      call GI % SetGrid &
+      call GI % SetGridWrite &
              ( 'Grid', Edge, nCells, nGhostInner, nGhostOuter, &
                nExteriorInner, nExteriorOuter, DM % nDimensions, &
                DM % nProperCells, DM % nGhostCells, &
                CoordinateUnitOption = DM % CoordinateUnit )
-      do iS = 1, size ( S )
-        call GI % AddStorage ( S ( iS ) )
+      do iS = 1, size ( Output )
+        call GI % AddStorage ( Output ( iS ) )
       end do
       end associate !-- GI
 
@@ -493,44 +557,119 @@ contains
 
     call GIS % Close ( )
 
-    end associate !-- GIS
+    end associate !-- GIS, CS
     
-    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Stop ( )
+    call T_IO % Stop ( )
 
   end subroutine SetImage
-
-
-  subroutine Write ( DM, TimeOption, CycleNumberOption )
+  
+  
+  subroutine Write ( DM, TimeOption, CycleNumberOption, InitialOption )
 
     class ( DistributedMeshForm ), intent ( inout ) :: &
       DM
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
+    logical ( KDL ), intent ( in ), optional :: &
+      InitialOption
+      
+    integer ( KDI ) :: &
+      iS
+    logical ( KDL ) :: &
+      Initial
+    type ( TimerForm ), pointer :: &
+      T_IO
+      
+    Initial = .false.
+    if ( present ( InitialOption ) ) &
+      Initial = InitialOption
           
-    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Start ( )
+    T_IO  =>  PROGRAM_HEADER % Timer &
+                ( DM % iTimer_IO, 'InputOutput', Level = 1 )
+    call T_IO % Start ( )
+
     call Show ( 'Writing image', CONSOLE % INFO_1 )
 
     associate ( GIS => DM % GridImageStream )
+    
     call GIS % Open ( GIS % ACCESS_CREATE )
 
     select case ( DM % nDimensions )
     case ( 1 ) 
+      if ( .not. Initial ) then
+        do iS = 1, size ( DM % CurveImage % Storage )
+          call DM % CurveImage % Storage ( iS ) % UpdateHost ( )
+        end do
+      end if
       call DM % CurveImage % Write &
              ( TimeOption = TimeOption, CycleNumberOption = CycleNumberOption )
     case default
+      if ( .not. Initial ) then
+        do iS = 1, size ( DM % GridImage % Storage )
+          call DM % GridImage % Storage ( iS ) % UpdateHost ( )
+        end do
+      end if
       call DM % GridImage % Write &
              ( TimeOption = TimeOption, CycleNumberOption = CycleNumberOption )
     end select
 
     call GIS % Close ( )
+
     end associate !-- GIS
     
     call Show ( DM % GridImageStream % Number, 'iImage', CONSOLE % INFO_1 )
-    call PROGRAM_HEADER % Timer ( DM % iTimer_IO ) % Stop ( )
+
+    call T_IO % Stop ( )
     
   end subroutine Write
+
+  
+  subroutine Read ( DM, iImage, TimeOption, CycleNumberOption )
+
+    class ( DistributedMeshForm ), intent ( inout ) :: &
+      DM
+    integer ( KDI ), intent ( in ) :: &
+      iImage
+    type ( QuantityForm ), intent ( out ), optional :: &
+      TimeOption
+    integer ( KDI ), intent ( out ), optional :: &
+      CycleNumberOption
+      
+    type ( TimerForm ), pointer :: &
+      T_IO
+
+    T_IO  =>  PROGRAM_HEADER % Timer &
+                ( DM % iTimer_IO, 'InputOutput', Level = 1 )
+    call T_IO % Start ( )
+
+    call Show ( 'Reading output', CONSOLE % INFO_1 )
+    
+    call Show ( iImage, 'iImage', CONSOLE % INFO_1 )
+
+    associate ( GI => DM % GridImageStream )
+    
+    call GI % Open ( GI % ACCESS_READ, NumberOption = iImage )
+
+    select case ( DM % nDimensions )
+    case ( 1 ) 
+      call DM % CurveImage % Read &
+             ( StorageOnlyOption = .true., &
+               TimeOption = TimeOption, CycleNumberOption = CycleNumberOption )
+    case default
+      call DM % GridImage % Read &
+             ( StorageOnlyOption = .true., &
+               TimeOption = TimeOption, CycleNumberOption = CycleNumberOption )
+    end select
+
+    call GI % Close ( )
+
+    end associate !-- GI
+    
+    call T_IO % Stop ( )
+
+  end subroutine Read
 
 
   subroutine Finalize ( DM )
@@ -857,6 +996,8 @@ contains
     call Show ( DM % CellArea, 'CellArea', CONSOLE % INFO_7 )
     call Show ( DM % CellVolume, 'CellVolume', CONSOLE % INFO_7 )
     call Show ( DM % BoundaryCondition, 'BoundaryCondition', DM % IGNORABILITY )
+    call Show ( DM % DevicesCommunicate, 'DevicesCommunicate', &
+                DM % IGNORABILITY )
 
   end subroutine ShowParameters
 

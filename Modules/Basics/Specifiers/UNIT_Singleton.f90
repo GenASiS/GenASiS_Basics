@@ -1,4 +1,4 @@
-!-- UNIT_Singleton instantiates MeasuredValueForm objects to a commonly used 
+!-- UNIT_Singleton instantiates QuantityForm objects to a commonly used 
 !   units of measure in GenASiS internal unit (meter).
 
 module UNIT_Singleton
@@ -6,7 +6,7 @@ module UNIT_Singleton
   use KIND_DEFAULT_Singleton
   use KIND_BIG_Singleton, &
         KB => KIND_BIG
-  use MeasuredValue_Form
+  use Quantity_Form
   use CONSTANT_Singleton, &
         C => CONSTANT
   
@@ -14,9 +14,9 @@ module UNIT_Singleton
   private
   
   type, public :: UnitSingleton
-    type ( MeasuredValueForm ) :: &  !-- Identity
+    type ( QuantityForm ) :: &  !-- Identity
       IDENTITY
-    type ( MeasuredValueForm ) :: &  !-- Length
+    type ( QuantityForm ) :: &  !-- Length
       METER, &
       CENTIMETER, &
       FEMTOMETER, &
@@ -25,64 +25,69 @@ module UNIT_Singleton
       PARSEC, &
       GIGAPARSEC, &
       ANGSTROM
-    type ( MeasuredValueForm ) :: &  !-- Mass
+    type ( QuantityForm ) :: &  !-- Mass
       KILOGRAM, &
       GRAM, &
       ATOMIC_MASS_UNIT, &
       SOLAR_MASS
-    type ( MeasuredValueForm ) :: &  !-- Time
+    type ( QuantityForm ) :: &  !-- Time
       SECOND, &
       MILLISECOND, &
       FEMTOSECOND
-    type ( MeasuredValueForm ) :: &  !-- Magnetic current
+    type ( QuantityForm ) :: &  !-- Magnetic current
       AMPERE
-    type ( MeasuredValueForm ) :: &  !-- Temperature
+    type ( QuantityForm ) :: &  !-- Temperature
       KELVIN
-    type ( MeasuredValueForm ) :: &  !-- Amount of substance
+    type ( QuantityForm ) :: &  !-- Amount of substance
       MOLE, &
       SOLAR_BARYON_NUMBER
-    type ( MeasuredValueForm ) :: &  !-- Angle
+    type ( QuantityForm ) :: &  !-- Angle
       RADIAN
-    type ( MeasuredValueForm ) :: &  !-- Frequency
+    type ( QuantityForm ) :: &  !-- Frequency
       HERTZ, &
       KILOHERTZ
-    type ( MeasuredValueForm ) :: &  !-- Speed
+    type ( QuantityForm ) :: &  !-- Speed
+      SPEED_MKS, &
+      SPEED_CGS, &
       SPEED_OF_LIGHT
-    type ( MeasuredValueForm ) :: &  !-- Momentum
+    type ( QuantityForm ) :: &  !-- Momentum
       MOMENTUM_SOLAR_MASS
-    type ( MeasuredValueForm ) :: &  !-- Force
+    type ( QuantityForm ) :: &  !-- Force
       NEWTON, &
       DYNE
-    type ( MeasuredValueForm ) :: &  !-- Pressure
+    type ( QuantityForm ) :: &  !-- Pressure
       PASCAL, &
       BARYE
-    type ( MeasuredValueForm ) :: &  !-- Magnetic field
+    type ( QuantityForm ) :: &  !-- Magnetic field
       TESLA, &
       GAUSS
-    type ( MeasuredValueForm ) :: &  !-- Electric potential
+    type ( QuantityForm ) :: &  !-- Electric potential
       VOLT
-    type ( MeasuredValueForm ) :: &  !-- Energy
+    type ( QuantityForm ) :: &  !-- Energy
       JOULE, &
       ERG, &
       ELECTRON_VOLT, &
       MEGA_ELECTRON_VOLT, &
       BETHE, &
       ENERGY_SOLAR_MASS
-    type ( MeasuredValueForm ) :: &  !-- Angular momentum
+    type ( QuantityForm ) :: &  !-- Angular momentum
       SOLAR_KERR_PARAMETER
-    type ( MeasuredValueForm ) :: &  !-- Entropy per baryon
+    type ( QuantityForm ) :: &  !-- Entropy per baryon
       BOLTZMANN
-    type ( MeasuredValueForm ) :: &  !-- Energy/length conversion
+    type ( QuantityForm ) :: &  !-- Energy/length conversion
       HBAR_C
-    type ( MeasuredValueForm ) :: &  !-- Number density
+    type ( QuantityForm ) :: &  !-- Number density
+      NUMBER_DENSITY_MKS, &
       NUMBER_DENSITY_ANGSTROM, &
       NUMBER_DENSITY_NUCLEAR, &
       NUMBER_DENSITY_MEV_HBAR_C
-    type ( MeasuredValueForm ) :: &  !-- Mass density
+    type ( QuantityForm ) :: &  !-- Mass density
+      MASS_DENSITY_MKS, &
       MASS_DENSITY_CGS
-    type ( MeasuredValueForm ) :: &  !-- Energy density
+    type ( QuantityForm ) :: &  !-- Energy density
+      ENERGY_DENSITY_MKS, &
       ENERGY_DENSITY_NUCLEAR
-    type ( MeasuredValueForm ) :: &  !-- Computer resources
+    type ( QuantityForm ) :: &  !-- Computer resources
       KILOBYTE, &
       WALL_TIME
   contains
@@ -202,6 +207,8 @@ contains
            ( 1.0e+3_KDR * U % HERTZ, 'kHz' )
     
     !-- Speed
+    U % SPEED_MKS  =  U % METER  /  U % SECOND 
+    U % SPEED_CGS  =  U % CENTIMETER  /  U % SECOND 
     call U % SPEED_OF_LIGHT % Initialize &
            ( 'c', '', C % SPEED_OF_LIGHT )
 
@@ -277,6 +284,8 @@ contains
     end if
 
     !-- Number density
+    U % NUMBER_DENSITY_MKS &
+      =  1 / U % METER ** 3
     U % NUMBER_DENSITY_ANGSTROM &
       =  1 / U % ANGSTROM ** 3
     U % NUMBER_DENSITY_NUCLEAR &
@@ -285,10 +294,14 @@ contains
       =  U % MEGA_ELECTRON_VOLT ** 3  /  U % HBAR_C ** 3
 
     !-- Mass density
+    U % MASS_DENSITY_MKS &
+      =  U % KILOGRAM  /  U % METER ** 3
     U % MASS_DENSITY_CGS &
       =  U % GRAM  /  U % CENTIMETER ** 3
 
     !-- Energy density
+    U % ENERGY_DENSITY_MKS &
+      =  U % JOULE  /  U % METER ** 3
     U % ENERGY_DENSITY_NUCLEAR &
       =  U % MEGA_ELECTRON_VOLT  /  U % FEMTOMETER ** 3
 
@@ -305,7 +318,7 @@ contains
     
     character ( * ), intent ( in ) :: &
       Selector
-    type ( MeasuredValueForm ), intent ( out ) :: &
+    type ( QuantityForm ), intent ( out ) :: &
       Result
 
     select case ( trim ( Selector ) )
@@ -355,6 +368,10 @@ contains
       Result = UNIT % HERTZ
     case ( 'KILOHERTZ' )  
       Result = UNIT % KILOHERTZ
+    case ( 'SPEED_MKS' ) 
+      Result = UNIT % SPEED_MKS
+    case ( 'SPEED_CGS' ) 
+      Result = UNIT % SPEED_CGS
     case ( 'SPEED_OF_LIGHT' ) 
       Result = UNIT % SPEED_OF_LIGHT
     case ( 'MOMENTUM_SOLAR_MASS' )
@@ -391,14 +408,20 @@ contains
       Result = UNIT % BOLTZMANN
     case ( 'HBAR_C' )
       Result = UNIT % HBAR_C
+    case ( 'NUMBER_DENSITY_MKS' )
+      Result = UNIT % NUMBER_DENSITY_MKS
     case ( 'NUMBER_DENSITY_ANGSTROM' )
       Result = UNIT % NUMBER_DENSITY_ANGSTROM
     case ( 'NUMBER_DENSITY_NUCLEAR' )
       Result = UNIT % NUMBER_DENSITY_NUCLEAR
     case ( 'NUMBER_DENSITY_MEV_HBAR_C' )
       Result = UNIT % NUMBER_DENSITY_MEV_HBAR_C
+    case ( 'MASS_DENSITY_MKS' )
+      Result = UNIT % MASS_DENSITY_MKS
     case ( 'MASS_DENSITY_CGS' )
       Result = UNIT % MASS_DENSITY_CGS
+    case ( 'ENERGY_DENSITY_MKS' )
+      Result = UNIT % ENERGY_DENSITY_MKS
     case ( 'ENERGY_DENSITY_NUCLEAR' )
       Result = UNIT % ENERGY_DENSITY_NUCLEAR
     case ( 'KILOBYTE' )

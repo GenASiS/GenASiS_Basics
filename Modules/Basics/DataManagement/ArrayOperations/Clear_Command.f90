@@ -160,14 +160,14 @@ contains
     nV = size ( A )
     
     if ( UseDevice ) then
-      !$OMP  OMP_TARGET_DIRECTIVE parallel do &
-      !$OMP& schedule ( OMP_SCHEDULE )
+      !$OMP OMP_TARGET_DIRECTIVE parallel do &
+      !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, nV
         A ( iV ) = 0.0_KDR
       end do
       !$OMP end OMP_TARGET_DIRECTIVE parallel do
     else
-      !$OMP parallel do private ( iV ) schedule ( OMP_SCHEDULE )
+      !$OMP parallel do private ( iV ) schedule ( OMP_SCHEDULE_HOST )
       do iV = 1, nV
         A ( iV ) = 0.0_KDR
       end do
@@ -197,27 +197,51 @@ contains
   end subroutine ClearReal_2D
   
   
-  subroutine ClearReal_3D ( A )
+  subroutine ClearReal_3D ( A, UseDeviceOption )
 
     real ( KDR ), dimension ( :, :, : ), intent ( out ) :: &
       A
+    logical ( KDL ), intent ( in ), optional :: &
+      UseDeviceOption
 
     integer ( KDI ) :: &
       iV, jV, kV
     integer ( KDI ), dimension ( 3 ) :: &
       nV
+    logical ( KDL ) :: &
+      UseDevice
+      
+    UseDevice = .false.
+    if ( present ( UseDeviceOption ) ) &
+      UseDevice = UseDeviceOption
 
     nV = shape ( A )
-
-    !$OMP parallel do private ( iV, jV, kV ) schedule ( OMP_SCHEDULE )
-    do kV = 1, nV ( 3 )
-      do jV = 1, nV ( 2 )
-        do iV = 1, nV ( 1 )
-          A ( iV, jV, kV ) = 0.0_KDR
+    
+    if ( UseDevice ) then
+      !$OMP OMP_TARGET_DIRECTIVE parallel do collapse ( 3 ) &
+      !$OMP schedule ( OMP_SCHEDULE_TARGET ) &
+      !$OMP private ( iV, jV, kV )
+      do kV = 1, nV ( 3 )
+        do jV = 1, nV ( 2 )
+          do iV = 1, nV ( 1 )
+            A ( iV, jV, kV ) = 0.0_KDR
+          end do
         end do
       end do
-    end do
-    !$OMP end parallel do
+      !$OMP end OMP_TARGET_DIRECTIVE parallel do
+    else
+      !$OMP parallel do collapse ( 3 ) &
+      !$OMP schedule ( OMP_SCHEDULE_HOST ) &
+      !$OMP private ( iV, jV, kV )
+      do kV = 1, nV ( 3 )
+        do jV = 1, nV ( 2 )
+          do iV = 1, nV ( 1 )
+            A ( iV, jV, kV ) = 0.0_KDR
+          end do
+        end do
+      end do
+      !$OMP end parallel do
+    end if
 
   end subroutine ClearReal_3D
   
@@ -270,7 +294,7 @@ contains
 
     nV = shape ( A )
 
-    !$OMP parallel do private ( iV, jV, kV ) schedule ( OMP_SCHEDULE )
+    !$OMP parallel do private ( iV, jV, kV ) schedule ( OMP_SCHEDULE_HOST )
     do kV = 1, nV ( 3 )
       do jV = 1, nV ( 2 )
         do iV = 1, nV ( 1 )
@@ -306,7 +330,7 @@ contains
 
     nV = size ( A )
 
-    !$OMP parallel do private ( iV ) schedule ( OMP_SCHEDULE )
+    !$OMP parallel do private ( iV ) schedule ( OMP_SCHEDULE_HOST )
     do iV = 1, nV
       A ( iV ) = .false.
     end do

@@ -13,7 +13,11 @@ module ConservationLawEvolution_Template
       iCycle, &
       nRampCycles, &
       nWrite, &
-      nCycles
+      FinishCycle, &
+      RestartFrom
+    integer ( KDI ), private :: &
+      iTimerComputation = 0, &
+      iTimerTimeStep = 0
     real ( KDR ) :: &
       CourantFactor, &
       StartTime, &
@@ -22,10 +26,13 @@ module ConservationLawEvolution_Template
       Time, &
       WriteTime, &
       TimeStep
-    type ( MeasuredValueForm ) :: &
+    type ( QuantityForm ) :: &
       TimeUnit
     character ( LDF ) :: &
       Type = ''
+    logical ( KDL ) :: &
+      NoWrite = .false., &
+      UseDevice = .true.
     type ( DistributedMeshForm ) :: &
       DistributedMesh
     class ( ConservedFieldsTemplate ), allocatable :: &
@@ -47,6 +54,30 @@ module ConservationLawEvolution_Template
       private :: &
         ComputeTimeStepKernel
 
+  interface
+  
+    module subroutine ComputeTimeStepKernel &
+                 ( FEP_1, FEP_2, FEP_3, FEM_1, FEM_2, FEM_3, &
+                   CellWidth, nDimensions, oV, TimeStepLocal, &
+                   UseDeviceOption )
+      use Basics
+      implicit none
+      real ( KDR ), dimension ( :, :, : ), intent ( in ) :: &
+        FEP_1, FEP_2, FEP_3, &
+        FEM_1, FEM_2, FEM_3
+      real ( KDR ), dimension ( : ), intent ( in ) :: &
+        CellWidth
+      integer ( KDI ), intent ( in ) :: &
+        nDimensions, &
+        oV
+      real ( KDR ), intent ( out ) :: &
+        TimeStepLocal
+      logical ( KDL ), intent ( in ), optional :: &
+        UseDeviceOption
+    end subroutine ComputeTimeStepKernel
+
+  end interface 
+
 contains
 
 
@@ -61,8 +92,17 @@ contains
 
     call Show ( 'Initializing ' // trim ( CLE % Type ), CONSOLE % INFO_1 )
 
+    CLE % UseDevice = .true.
+    call PROGRAM_HEADER % GetParameter ( CLE % UseDevice, 'UseDevice' )
+    
+    CLE % UseDevice &
+      = ( OffloadEnabled ( ) .and. NumberOfDevices ( ) >= 1 &
+          .and. CLE % UseDevice )
+    
+    call Show ( CLE % UseDevice, 'UseDevice', CONSOLE % INFO_2 )
+    
     associate ( DM => CLE % DistributedMesh )
-    call DM % Initialize ( C, BoundaryConditionOption )
+    call DM % Initialize ( C, CLE % UseDevice, BoundaryConditionOption )
 
     CLE % iCycle = 0
     CLE % nRampCycles = 100
@@ -79,24 +119,31 @@ contains
     call PROGRAM_HEADER % GetParameter &
            ( CLE % CourantFactor, 'CourantFactor' )
 
-    CLE % StartTime  = 0.0_KDR
-    CLE % FinishTime = 1.0_KDR
-    CLE % TimeUnit   = UNIT % IDENTITY
-    CLE % nCycles    = huge ( 1 )
+    CLE % StartTime   = 0.0_KDR
+    CLE % FinishTime  = 1.0_KDR
+    CLE % TimeUnit    = UNIT % IDENTITY
+    CLE % FinishCycle = huge ( 1 )
     call PROGRAM_HEADER % GetParameter &
            ( CLE % StartTime, 'StartTime', InputUnitOption = CLE % TimeUnit )    
     call PROGRAM_HEADER % GetParameter &
            ( CLE % FinishTime, 'FinishTime', InputUnitOption = CLE % TimeUnit )
     call PROGRAM_HEADER % GetParameter &
-           ( CLE % nCycles, 'nCycles' )
+           ( CLE % FinishCycle, 'FinishCycle' )
 
     CLE % nWrite = 100
     call PROGRAM_HEADER % GetParameter ( CLE % nWrite, 'nWrite' )
 
-    CLE % WriteTimeInterval = ( CLE % FinishTime - CLE % StartTime ) / CLE % nWrite
+    CLE % WriteTimeInterval &
+      = ( CLE % FinishTime - CLE % StartTime ) / CLE % nWrite
     call PROGRAM_HEADER % GetParameter &
            ( CLE % WriteTimeInterval, 'WriteTimeInterval' )
-
+           
+    CLE % NoWrite = .false.
+    call PROGRAM_HEADER % GetParameter ( CLE % NoWrite, 'NoWrite' )
+    
+    CLE % RestartFrom = - huge ( 1 )
+    call PROGRAM_HEADER % GetParameter ( CLE % RestartFrom, 'RestartFrom' )
+    
     !-- Extensions are responsible for initializing CLE % ConservedFields
 
     !-- CLE % ConservationLawStep initialized below in CLE % Evolve
@@ -110,34 +157,53 @@ contains
 
     class ( ConservationLawEvolutionTemplate ), intent ( inout ) :: &
       CLE
-      
-    integer ( KDI ) :: &
-      iTimerComputation
-      
-    call PROGRAM_HEADER % AddTimer &
-           ( 'Computational', iTimerComputation, Level = 1 )
     
+    type ( QuantityForm ) :: &
+      RestartTime
+    type ( TimerForm ), pointer :: &
+      T
+      
     associate &
       ( DM  => CLE % DistributedMesh, &
-        CLS => CLE % ConservationLawStep, &
-        T => PROGRAM_HEADER % Timer ( iTimerComputation ) )
-
-    call CLS % Initialize ( CLE % ConservedFields )    
+        CLS => CLE % ConservationLawStep )
 
     CLE % Time = CLE % StartTime
-
-    call DM % Write &
-           ( TimeOption = CLE % Time / CLE % TimeUnit, &
-             CycleNumberOption = CLE % iCycle )
+    
+    !-- Initial write
+    if ( .not. CLE % NoWrite ) &
+      call DM % Write &
+             ( TimeOption = CLE % Time / CLE % TimeUnit, &
+               CycleNumberOption = CLE % iCycle, InitialOption = .true. )
+    
+    !-- Restart 
+    if ( CLE % RestartFrom >= 0 ) then
+      call DM % Read &
+               ( iImage = CLE % RestartFrom, &
+                 TimeOption = RestartTime, &
+                 CycleNumberOption = CLE % iCycle )
+      CLE % Time = RestartTime * CLE % TimeUnit
+      call DM % StartGhostExchange ( )
+      call DM % FinishGhostExchange ( )
+      associate ( CF => CLE % ConservedFields )
+      call CF % ComputeAuxiliary ( CF % Value, UseDeviceOption = .false. )
+      call CF % ComputeConserved ( CF % Value, UseDeviceOption = .false. )
+      end associate !-- CF
+    end if
+    
+    call CLS % Initialize ( CLE % ConservedFields )
+    call CLE % ConservedFields % UpdateDevice ( )
+    
     CLE % WriteTime &
       = min ( CLE % Time + CLE % WriteTimeInterval, CLE % FinishTime )
-
-    call Show ( 'Evolving a Fluid', CONSOLE % INFO_1 )
     
-    call T % Start ( ) 
+    call Show ( 'Evolving a Fluid', CONSOLE % INFO_1 )
+
+    T  =>  PROGRAM_HEADER % Timer &
+             ( CLE % iTimerComputation, 'Computation', Level = 1 )
+    call T % Start ( )
 
     do while ( CLE % Time < CLE % FinishTime &
-               .and. CLE % iCycle < CLE % nCycles )
+               .and. CLE % iCycle < CLE % FinishCycle )
 
       call Show ( 'Solving Conservation Equations', CONSOLE % INFO_2 )
 
@@ -157,10 +223,12 @@ contains
       if ( CLE % Time >= CLE % WriteTime ) then
 
         call T % Stop ( )
-
-        call DM % Write &
-               ( TimeOption = CLE % Time / CLE % TimeUnit, &
-                 CycleNumberOption = CLE % iCycle )
+        
+        if ( .not. CLE % NoWrite ) then
+          call DM % Write &
+                 ( TimeOption = CLE % Time / CLE % TimeUnit, &
+                   CycleNumberOption = CLE % iCycle )
+        end if
         CLE % WriteTime &
           = min ( CLE % Time + CLE % WriteTimeInterval, CLE % FinishTime )
         
@@ -170,7 +238,7 @@ contains
         call T % Start ( )
         
       end if
-
+      
     end do
     
     call T % Stop ( )
@@ -190,16 +258,24 @@ contains
       FEM_1, FEM_2, FEM_3
     real ( KDR ) :: &
       RampFactor
+    type ( StorageForm ) :: &
+      Eigenspeed
     type ( CollectiveOperation_R_Form ) :: &
       CO
-
+    type ( TimerForm ), pointer :: &
+      T_TS
+      
     associate &
       ( DM => CLE % DistributedMesh, &
         CF => CLE % ConservedFields )
-
+    
+    T_TS  =>  PROGRAM_HEADER % Timer &
+                ( CLE % iTimerTimeStep, 'ComputeTimeStep', Level = 2 )
+    call T_TS % Start ( )
+    
     RampFactor &
       = min ( real ( CLE % iCycle + 1, KDR ) / CLE % nRampCycles, 1.0_KDR )
-
+      
     !-- Only proper cells!
 
     call DM % SetVariablePointer &
@@ -218,56 +294,20 @@ contains
     call CO % Initialize &
            ( PROGRAM_HEADER % Communicator, &
              nOutgoing = [ 1 ], nIncoming = [ 1 ] )
-    associate ( nCPB => DM % nCellsPerBrick )
     call ComputeTimeStepKernel &
-           ( FEP_1 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             FEP_2 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             FEP_3 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             FEM_1 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             FEM_2 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             FEM_3 ( 1 : nCPB ( 1 ), 1 : nCPB ( 2 ), 1 : nCPB ( 3 ) ), &
-             DM % CellWidth, DM % nDimensions, CO % Outgoing % Value ( 1 ) )
-    end associate !-- nCPB
+           ( FEP_1, FEP_2, FEP_3, FEM_1, FEM_2, FEM_3, DM % CellWidth, &
+             DM % nDimensions, DM % nGhostLayers ( 1 ), &
+             CO % Outgoing % Value ( 1 ), UseDeviceOption = CLE % UseDevice )
     call CO % Reduce ( REDUCTION % MIN )
 
     CLE % TimeStep &
       = RampFactor * CLE % CourantFactor * CO % Incoming % Value ( 1 )
 
+    call T_TS % Stop ( )
+ 
     end associate !-- DM, etc.
 
   end subroutine ComputeTimeStep
-
-
-  subroutine ComputeTimeStepKernel &
-               ( FEP_1, FEP_2, FEP_3, FEM_1, FEM_2, FEM_3, &
-                 CellWidth, nDimensions, TimeStepLocal )
-
-    real ( KDR ), dimension ( :, :, : ), intent ( in ) :: &
-      FEP_1, FEP_2, FEP_3, &
-      FEM_1, FEM_2, FEM_3
-    real ( KDR ), dimension ( : ), intent ( in ) :: &
-      CellWidth
-    integer ( KDI ), intent ( in ) :: &
-      nDimensions
-    real ( KDR ), intent ( out ) :: &
-      TimeStepLocal
-
-    select case ( nDimensions ) 
-    case ( 1 ) 
-      TimeStepLocal &
-        = CellWidth ( 1 ) &
-          / maxval ( max ( FEP_1, -FEM_1 ) )
-    case ( 2 ) 
-      TimeStepLocal &
-        = minval ( CellWidth ( 1 : 2 ) ) &
-          / maxval ( max ( FEP_1, FEP_2, -FEM_1, -FEM_2 ) )
-    case ( 3 ) 
-      TimeStepLocal &
-        = minval ( CellWidth ) &
-          / maxval ( max ( FEP_1, FEP_2, FEP_3, -FEM_1, -FEM_2, -FEM_3 ) )
-    end select
-
-  end subroutine ComputeTimeStepKernel
 
 
 end module ConservationLawEvolution_Template

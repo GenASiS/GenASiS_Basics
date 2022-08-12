@@ -151,14 +151,15 @@ module PolytropicFluid_Form
       end subroutine ApplyBoundaryConditionsReflecting
 
       module subroutine ComputeRawFluxesKernel &
-                   ( F_D, F_S_1, F_S_2, F_S_3, F_S_Dim, F_G, D, S_1, S_2, S_3, &
-                     G, P, V_Dim, UseDevice )
+                   ( F_D, F_S_1, F_S_2, F_S_3, F_G, &
+                     D, S_1, S_2, S_3, G, P, V_Dim, UseDevice, iDim )
         use Basics
         implicit none
         real ( KDR ), dimension ( : ), intent ( inout ) :: &
           F_D, &
-          F_S_1, F_S_2, F_S_3, &
-          F_S_Dim, &
+          F_S_1, &
+          F_S_2, &
+          F_S_3, &
           F_G
         real ( KDR ), dimension ( : ), intent ( in ) :: &
           D, &
@@ -168,6 +169,8 @@ module PolytropicFluid_Form
           V_Dim
         logical ( KDL ), intent ( in ) :: &
           UseDevice
+        integer ( KDI ), intent ( in ) :: &
+          iDim
       end subroutine ComputeRawFluxesKernel
 
     end interface
@@ -191,14 +194,14 @@ contains
       NameOption
     logical ( KDL ), intent ( in ), optional :: &
       ClearOption
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
     type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
 
     character ( LDL ), dimension ( : ), allocatable :: &
       Variable
-    type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
+    type ( QuantityForm ), dimension ( : ), allocatable :: &
       VariableUnit
 
     call InitializeBasics &
@@ -229,7 +232,8 @@ contains
     if ( present ( UseDeviceOption ) ) &
       UseDevice = UseDeviceOption
     
-    call CF % PressurelessFluidForm % ComputeConserved ( Value, UseDeviceOption )
+    call CF % PressurelessFluidForm &
+            % ComputeConserved ( Value, UseDeviceOption )
 
     call ComputeConservedKernel &
       ( Value ( :, CF % CONSERVED_ENERGY ), &
@@ -259,7 +263,8 @@ contains
     if ( present ( UseDeviceOption ) ) &
       UseDevice = UseDeviceOption
     
-    call CF % PressurelessFluidForm % ComputePrimitive ( Value, UseDeviceOption )
+    call CF % PressurelessFluidForm &
+            % ComputePrimitive ( Value, UseDeviceOption )
 
     call ComputePrimitiveKernel &
            ( Value ( :, CF % INTERNAL_ENERGY ), &
@@ -478,7 +483,7 @@ contains
       UseDevice = UseDeviceOption
 
     !call CF % PressurelessFluidForm % ComputeRawFluxes &
-    !       ( RawFlux, Value, iDimension, D_RawFlux, D_Value ) 
+    !       ( RawFlux, Value, iDimension, UseDeviceOption = UseDeviceOption ) 
 
     call Search &
            ( CF % iaConserved, CF % CONSERVED_DENSITY, iDensity )
@@ -490,16 +495,12 @@ contains
            ( CF % iaConserved, CF % MOMENTUM_DENSITY ( 3 ), iMomentum ( 3 ) )
     call Search &
            ( CF % iaConserved, CF % CONSERVED_ENERGY, iEnergy )
-    call Search &
-           ( CF % iaConserved, CF % MOMENTUM_DENSITY ( iDimension ), &
-             iMomentumDim )
     
     call ComputeRawFluxesKernel &
            ( RawFlux ( :, iDensity ), &
              RawFlux ( :, iMomentum ( 1 ) ), &
              RawFlux ( :, iMomentum ( 2 ) ), &
              RawFlux ( :, iMomentum ( 3 ) ), &
-             RawFlux ( :, iMomentumDim ), &
              RawFlux ( :, iEnergy ), &
              Value ( :, CF % CONSERVED_DENSITY ), &
              Value ( :, CF % MOMENTUM_DENSITY ( 1 ) ), &
@@ -508,8 +509,8 @@ contains
              Value ( :, CF % CONSERVED_ENERGY ), &
              Value ( :, CF % PRESSURE ), &
              Value ( :, CF % VELOCITY ( iDimension ) ), &
-             UseDevice )
-               
+             UseDevice, iDimension )
+
   end subroutine ComputeRawFluxes
   
   
@@ -521,9 +522,9 @@ contains
       PF
     logical ( KDL ), intent ( in ), optional :: &
       UnitsOnlyOption
-    type ( MeasuredValueForm ), dimension ( 3 ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( 3 ), intent ( in ), optional :: &
       VelocityUnitOption
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       DensityUnitOption, &
       EnergyUnitOption
 
@@ -533,10 +534,10 @@ contains
       VectorIndices
     real ( KDR ) :: &
       Gamma
-    type ( MeasuredValueForm ) :: &
+    type ( QuantityForm ) :: &
       DensityUnit, &
       EnergyUnit
-    type ( MeasuredValueForm ), dimension ( 3 ) :: &
+    type ( QuantityForm ), dimension ( 3 ) :: &
       VelocityUnit
     logical ( KDL ) :: &
       UnitsOnly
@@ -574,11 +575,13 @@ contains
            ( PF, &
              iaSelectedOption &
                = [ PF % COMOVING_DENSITY, PF % VELOCITY, &
-                   PF % PRESSURE, PF % POLYTROPIC_PARAMETER ], &
+                   PF % INTERNAL_ENERGY, PF % PRESSURE, &
+                   PF % POLYTROPIC_PARAMETER ], &
              VectorOption = [ 'Velocity                       ' ], &
              VectorIndicesOption = VectorIndices )
 
-    call PF % DistributedMesh % SetImage ( PF % Output, PROGRAM_HEADER % Name )
+    call PF % DistributedMesh % SetImage &
+           ( Output = PF % Output, Name = PROGRAM_HEADER % Name )
 
   end subroutine SetOutputPolytropic
 
@@ -601,12 +604,12 @@ contains
       PF
     character ( LDL ), dimension ( : ), allocatable, intent ( out ) :: &
       Variable
-    type ( MeasuredValueForm ), dimension ( : ), allocatable, &
+    type ( QuantityForm ), dimension ( : ), allocatable, &
       intent ( out ) :: &
         VariableUnit
     character ( * ), dimension ( : ), intent ( in ), optional :: &
       VariableOption
-    type ( MeasuredValueForm ), dimension ( : ), optional, intent ( in ) :: &
+    type ( QuantityForm ), dimension ( : ), optional, intent ( in ) :: &
       VariableUnitOption
 
     integer ( KDI ) :: &

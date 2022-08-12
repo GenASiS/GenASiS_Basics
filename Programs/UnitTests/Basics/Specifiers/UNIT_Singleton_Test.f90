@@ -2,7 +2,7 @@ program UNIT_Singleton_Test
 
   use ISO_FORTRAN_ENV
   use KIND_BIG_Singleton
-  use MeasuredValue_Form
+  use Quantity_Form
   use UNIT_Singleton
   
   implicit none
@@ -132,5 +132,10 @@ program UNIT_Singleton_Test
   print*
   print*, 'Energy Density Units'
   print*, 'ENERGY_DENSITY_NUCLEAR', UNIT % ENERGY_DENSITY_NUCLEAR
+
+  print*
+  print*, 'Computer Resources Units'
+  print*, 'KILOBYTE ', UNIT % KILOBYTE
+  print*, 'WALL_TIME', UNIT % WALL_TIME
 
 end program UNIT_Singleton_Test

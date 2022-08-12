@@ -38,6 +38,8 @@ module ConservedFields_Template
   contains
     procedure, public, pass :: &
       InitializeTemplate
+    procedure, public, pass :: &
+      SetOutputTemplate
     procedure ( ComputeInterface ), public, pass, deferred :: &
       ComputeConserved
     procedure ( ComputeInterface ), public, pass, deferred :: &
@@ -139,12 +141,12 @@ contains
       NameOption
     logical ( KDL ), intent ( in ), optional :: &
       ClearOption
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
     type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
 
-    type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
+    type ( QuantityForm ), dimension ( : ), allocatable :: &
       VariableUnit
     character ( LDL ), dimension ( : ), allocatable :: &
       Variable
@@ -172,12 +174,9 @@ contains
     class ( ConservedFieldsTemplate ), intent ( inout ) :: &
       CF
 
-    call CF % Output ( 1 ) % Initialize &
-           ( CF, iaSelectedOption = CF % iaPrimitive )
-
   end subroutine SetOutputTemplate
-
-
+  
+  
   subroutine InitializeBasics &
                ( CF, Variable, VariableUnit, VariableOption, NameOption, &
                  VariableUnitOption )
@@ -186,14 +185,14 @@ contains
       CF
     character ( LDL ), dimension ( : ), allocatable, intent ( out ) :: &
       Variable
-    type ( MeasuredValueForm ), dimension ( : ), allocatable, &
+    type ( QuantityForm ), dimension ( : ), allocatable, &
       intent ( out ) :: &
         VariableUnit
     character ( * ), dimension ( : ), intent ( in ), optional :: &
       VariableOption
     character ( * ), intent ( in ), optional :: &
       NameOption
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
       VariableUnitOption
 
     integer ( KDI ) :: &

@@ -1,0 +1,187 @@
+The following describes the directory structure of GenASiS with names
+a brief description of each file.
+
+
+"Build" contains files and directory used by Makefile to build the code.
+
+"Modules/" contains the files forming the central functionality of GenASiS.
+It contains the following directory and files:
+
+  Basics/
+
+    Specifiers/
+      KIND_DEFAULT_Singleton.f90:  KIND_DEFAULT_Singleton defines default kind parameters for intrinsic data types
+      KIND_BIG_Singleton.f90: KIND_DEFAULT_Singleton defines kind parameters for bigger-than-normal data types
+      KIND_SMALL_Singleton.f90:  KIND_SMALL_Singleton defines kind parameters for smaller-than-normal intrinsic data types.
+      KIND_TINY_Singleton.f90:  KIND_TINY_Singleton defines kind parameters for tinier-than-normal intrinsic data types.
+      LEN_DEFAULT_Singleton.f90:  LEN_DEFAULT_Singleton defines some standard len parameters for the character data type. 
+      Split_Command.f90:  Split_Command implements subroutine Split to split a string by delimiter string
+      Join_Command.f90:  Join_Command implements subroutine Join to join an array of strings by glue string
+      QuantityForm_Form.f90:  QuantityForm handles numbers with labels (typically units) providing means of dealing with units, for example. 
+      CONSTANT_Singleton.f90:  CONSTANT_Singleton defines physical and astrophysical constants "Natural units" with Lorentz-Heaviside electron charge, base unit = MeV ( hBar = c = k = \mu = MeV = 1 ) https://en.wikipedia.org/wiki /Natural_units#.22Natural_units.22_.28particle_physics_and_cosmology.29
+      UNIT_Singleton.f90:  UNIT_Singleton instantiates MeasuredValueForm objects to a commonly used units of measure in GenASiS internal unit (meter).
+      Specifiers.f90: is a supermodule for Specifiers sub-division.
+
+    Devices/
+      Device_OMP.c: contains wrappeers for OpenMP routines.
+      Device_CUDA.c: contains wrappers for C CUDA routines.
+      Devuce_HIP.c: contains wrappers for C HIP routines.
+      Device_C_OMP.f90: contains interfaces to bind with C wrappers for CUDA and OpenMP subroutines.
+      AllocateDevice_Command.f90: is a command to allocate memory on the device.
+      AssociateHost_Command.f90: is a command to associate host memory location with device's
+      DeallocateDevice_Command.f90: is a command to deallocate memory location on device.
+      DisassociateHost_Command.f90: is a command to disassociate host memory location fron device's.
+      UpdateDevice_Command.f90: is a command to update device value from host.
+      UpdateHost_Command.f90: is a command to update host value from device.
+      AllocateHost_Command.f90: is a command to allocate pinned memory on the host.
+      DeallocateHost_Command.f90: is a command to Deallocate memory on the host.
+      OffloadEnabled_Function.f90: contains function to check whether offloading to device is enabled.
+      NumberOfDevices_Function.f90: contains function to get the number of devices (accelerators) available.
+      DeviceAddress_Function.f90: contains function to get the corresponding device memory address of a host memory address.
+      GetDeviceMemoryInfo_Command.f90: contains subroutine to get device memory info.
+      OnDevice_Function.f90: contains function to check whether the a host variable is already present on device.
+      SelectDevice_Command.f90: contains subroutine to select the default device for target offload execution.
+      SelectedDevice_Function.f90: contains an inquiry function to get the default device for target offload execution.
+      Devices.f90: is a supermodule for Devices sub-division
+
+    DataManagement/
+      Storages/
+        Storage_Form.f90:  StorageForm provides infrastructure in handling collection of variables, typically sets of related physical fields. It includes both the metadata about the variables (names, units, etc) and storage for the variable data itself.
+        PackedStorage_Form.f90:  PackedStorageForm loads and stores selected rows and columns of a Storage data array into a contiguous data array. 
+        Storage_1D__Form.f90:  Storage_1D_Form allows bundling of an array of Storage and stores information about each element of the array.
+        Storages.f90: is a supermodule for Storages sub-division
+
+      ArrayOperations/
+        Clear_Command.f90:  Clear_Command provides overloaded "clear" routines with intent(out) arguments of intrinsic data types, so that the compiler will use fast operations to set arrays to zero (or to .false. in the case of logical arrays)
+        Copy_Command.f90:  Copy_Command provides overloaded "copy" routines with intent(in) and intent(out) arguments of intrinsic data types, so that the compiler will use fast copy methods. 
+        Sort_Command.f90:  Sort_Commands implements an overloaded "Sort" subroutine to sort arrays of intrinsict types
+        Search_Command.f90:  Search_Command implements an overloaded "search" subroutine to find the index of a sorted array (of intrinsic types) corresponding to an input value based on Numerical Recipes, Fortran (1992), Fortran 90 (1996) routine "locate", but with modification Given a sorted array A and a value Value, returns iValue such that 
+        Add_Command.f90:  Add_Command provides overloaded provides an overloaded interface to add matrices, in order to expose elemental variables to the compiler and include threading
+        MultiplyAdd_Command.f90: MultiplyAdd_Command provides an overloaded interface to multiply and add matrices in order to expose elemental variables to the compiler and include threading.
+        ArrayOperations.f90: is a supermodule for ArrayOperations sub-division.
+
+      ArrayArrays/
+        Integer_1D__Form.f90:  Integer_1D_Form allows the construction of an array of 1D integer arrays to form ragged arrays.
+        Integer_2D__Form.f90:  Integer_2D_Form allows the construction of an array of 2D integer arrays to form ragged arrays.
+        Integer_3D__Form.f90:  Integer_3D_Form allows the construction of an array of 3D integer arrays to form ragged arrays.
+        Real_1D__Form.f90:  Real_1D_Form allows the construction of an array of 1D real arrays to form ragged arrays.
+        Real_2D__Form.f90:  Real_2D_Form allows the construction of an array of 2D real arrays to form ragged arrays.
+        Real_3D__Form.f90:  Real_3D_Form allows the construction of an array of 3D real arrays to form ragged arrays.
+        Real_3D_2D__Form.f90:  Real_3D_2D_Form allows the construction of an array of 2D arrays of 3D real arrays to form ragged arrays.
+        Complex_3D__Form.f90:  Complex_3D_Form allows the construction of an array of 3D complex arrays to form ragged arrays.
+        Character_1D__Form.f90:  Character_1D_Form allows the construction of an array of 1D character arrays to form ragged arrays.
+        ArrayArrays.f90: is a supermodule for ArrayArrays sub-division.
+      DataManagement.f90: is a supermodule for DataManagement subdivision.
+
+    Displays/
+      ConsoleHeader_Form.f90:  ConsoleHeaderForm defines message verbosity flags and labels
+      CONSOLE_Singleton.f90:  ConsoleSingleton extends ConsoleHeaderForm and specifies the process rank that displays to the "console" (i.e. STDOUT) with the accompanying methods to modify the display properties.
+      Show_Command.f90:  Show_Command implements an overloaded "Show" subroutine that shows either a message or a piece of data together with a label
+      ShowInteger.f90:  This wrapper exists for use by CONSOLE_Singleton. Convention on argument order violated because the Integer being "Show"n is more important than the Description.
+      ShowCharacter.f90:  This wrapper exists for use by CONSOLE_Singleton.
+      ShowMessage.f90:  This wrapper exists for use by CONSOLE_Singleton.
+      Display.f90: is a supermodule for Display subdivision
+    
+    MessagePassing/
+
+      MessagePassingBasics/
+        Communicator_Form.f90:  CommunicatorForm is a class to abstract the notion of communicator that connect a group of processes in a distributed-memory parallel program. 
+        PortalHeader_Form.f90:  PortalHeaderForm handles basic information about an infrastructure for message passing
+        MessagePassingBasics.f90: is a supermodule for MessagePassingBasics sub-division
+
+      PointToPoint/
+        Message_Template.f90:  MessageTemplate provides an abstraction commonly shared by higher-level, concrete type object with specified datatype.
+        Message_I__Form.f90:  Message_I_Form provides the concrete type for Message object for integer datatype
+        Message_BI__Form.f90:  Message_BI_Form provides the concrete type for Message object for long (big) integer datatype
+        Message_R__Form.f90:  Message_R_Form provides the concrete type for Message object for real datatype
+        Message_C__Form.f90:  Message_C_Form provides the concrete type for Message object for complex datatype
+        MessageIncoming_I__Form.f90:  MessageIncoming_I_Form is inherited from Message_I_Form to provide specific methods for receiving messages.
+        MessageIncoming_BI__Form.f90:  MessageIncoming_BI_Form is inherited from Message_BI_Form to provide specific methods for receiving messages.
+        MessageIncoming_R__Form.f90:  MessageIncoming_R_Form is inherited from Message_R_Form to provide specific methods for receiving messages.
+        MessageIncoming_C__Form.f90:  MessageIncoming_C_Form is inherited from Message_C_Form to provide specific methods for receiving messages.
+        MessageOutgoing_I__Form.f90:  MessageOutgoing_I_Form is inherited from Message_I_Form to provide specific methods for sending messages.
+        MessageOutgoing_BI__Form.f90:  MessageOutgoing_BI_Form is inherited from Message_BI_Form to provide specific methods for sending messages.
+        MessageOutgoing_R__Form.f90:  MessageOutgoing_R_Form is inherited from Message_R_Form to provide specific methods for sending messages.
+        MessageOutgoing_C__Form.f90:  MessageOutgoing_C_Form is inherited from Message_C_Form to provide specific methods for sending messages.
+        Message_1D__Template.f90:  Message_1D_Template provides an abstraction commonly shared by higher-level, concrete type object with specified datatype to array of messages.
+        MessageIncoming_1D_I__Form.f90:  MessageIncoming_1D_I_Form provides the concrete extension of Message_1D_Template for integer datatype to handle receiving array of messages.
+        MessageIncoming_1D_BI__Form.f90:  MessageIncoming_1D_BI_Form provides the concrete extension of Message_1D_Template for big ( long )integer datatype to handle receiving array of messages.
+        MessageIncoming_1D_R__Form.f90:  MessageIncoming_1D_R_Form provides the concrete extension of Message_1D_Template for real datatype to handle receiving array of messages.
+        MessageIncoming_1D_C__Form.f90:  MessageIncoming_1D_C_Form provides the concrete extension of Message_1D_Template for complex datatype to handle receiving array of messages.
+        MessageOutgoing_1D_I__Form.f90:  MessageOutgoing_1D_I_Form provides the concrete extension of Message_1D_Template for integer datatype to handle sending array of messages.
+        MessageOutgoing_1D_BI__Form.f90:  MessageOutgoing_1D_BI_Form provides the concrete extension of Message_1D_Template for big (long) integer datatype to handle sending array of messages.
+        MessageOutgoing_1D_R__Form.f90:  MessageOutgoing_1D_R_Form provides the concrete extension of Message_1D_Template for real datatype to handle sending array of messages.
+        MessageOutgoing_1D_C__Form.f90:  MessageOutgoing_1D_C_Form provides the concrete extension of Message_1D_Template for complex datatype to handle sending array of messages.
+        PointToPoint.f90: is a supermodule for PointToPoint subdivision
+
+      
+      Collective/
+        REDUCTION_Singleton.f90:  ReductionSingleton abstracts specified constants and flags for collective operation.
+        CollectiveOperation_Template.f90:  CollectiveOperationTemplate provides an abstraction commonly shared by higher-level, concrete type object with specified datatype for handling collective operations.
+        CollectiveOperation_I__Form.f90:  CollectiveOperation_I_Form provides a concrete extension of CollectiveOperationTemplate for integer datatype for handling collective operations.
+        CollectiveOperation_BI__Form.f90: CollectiveOperation_BI_Form provides a concrete extension of CollectiveOperationTemplate for big integer datatype for handling collective operations. 
+        CollectiveOperation_R__Form.f90:  CollectiveOperation_R_Form provides a concrete extension of CollectiveOperationTemplate for real datatype for handling collective operations.
+        CollectiveOperation_C__Form.f90:  CollectiveOperation_C_Form provides a concrete extension of CollectiveOperationTemplate for complex datatype for handling collective operations.
+        Collective.f90: is a supermodule for Collective subdivision
+
+      MessagePassing.f90: is a suppermodule for MessagePassing sub-division
+    
+    FileSystems/
+      
+      FileSystemBasics/
+        DelayFileAccess_Command.f90:  DelayFileAccess provides a mechanism to delay operaration (e.g. open, read, write) based on process rank, suitable to prevent e.g. metadata operation congestion on parallel file system.
+        ReadLabelValue_Command.f90:  Given a string in the general form label=value, ReadLabelValue parses the string and returns the label and its value as separate variables
+        FindParameter_Command.f90:  Given an array of strings of the form label=value, FindParameter finds the one with a particular label (if it exists) and reads the value.
+        ParameterStream_Form.f90:  ParameterStreamForm is a class to read a parameter file with multiple label=value lines.
+        TableStream_Form.f90:  TableStreamForm is a class to read file in (ASCII) table form.
+        FileSystemBasics.f90: is a supermodule for FileSystemBasics sub-division
+        
+      GridImageBasics/
+        DB_TableOfContentsType_Silo_C.f90:  Bindings for the Silo C structure DBtoc and C function DBGetToc
+        DB_PointMeshType_Silo_C.f90:  Bindings for the Silo C structure DBpointmesh and C functions DBGetPointmesh and DBFreePointmesh
+        DB_MeshVariableType_Silo_C.f90:  Bindings for the Silo C structure DBmeshvar and C functions DBGetPointvar and DBFreeMeshvar
+        DB_QuadMeshType_Silo_C.f90:  Bindings for the Silo C structure DBquadmesh and C functions DBGetQuadmesh and DBFreeQuadmesh
+        DB_QuadVariableType_Silo_C.f90:  Bindings for the Silo C structure DBquadvar and C functions DBGetQuadvar and DBFreeQuadvar
+        DB_UnstructuredMeshType_Silo_C.f90:  Bindings for the Silo C structure DBucdmesh, DBzonelist, and C functions DBGetUcdmesh and DBFreeUcdmesh
+        DB_UnstructuredVariableType_Silo_C.f90:  Bindings for the Silo C structure DBucdvar and C functions DBGetUcdvar and DBFreeUcdvar
+        GridImageStream_Template.f90:  GridImageStreamTemplate is an abstract class to handle related file access (i.e. stream) for GridImage (parallel and serial). This class' members will be needed and inherited by any implementation of GridImageStream in the form of its extension.
+        GridImageStream_Form.f90:  GridImageStreamSilo is a class to handle access Silo file format and its structures.
+        GridImage_Template.f90:  GridImageTemplate is an abstract class whose members will be needed and inherited by any implementation of GridImage in the form of its extension.
+        GridImageSilo_Template.f90:  GridImageSiloTemplate is an abstract class whose members will be needed and inherited by the different types of Silo GridImage in the form of its extension.
+        GridImageBasics.f90: is a supermodule for GridImageBasics sub-division
+
+
+      CurveImages/
+        CurveImage_Form.f90:  CurveImagesSiloForm provides a class to generate one-dimensional grid data on XY-plane (curve) as columns in Silo format, suitable for VisIt visualization tool.
+        CurveImages.f90: is a supermodule for CurveImages sub-division
+
+      StructuredGridImage/
+        StructuredGridImage_Form.f90:  StructuredGridImageSiloForm is a class for handling structured grid in Silo format, suitable for visualization tool such as VisIt.
+        StructuredGridImages.f90: is a supermodule for StructuredGridImage sub-division
+
+      UnstructuredGridImages/
+        UnstructuredGridImage_Form.f90:  UnstructuredGridImageForm is a class for handling unstructured grid in Silo format, suitable for visualization tool such as VisIt.
+        UnstructuredGridImages.f90: is a supermodule for UnstructuredGridImage sub-division
+
+      PointGridImages/
+        PointGridImage_Form.f90:  PointGridImageForm is a class for handling point grid in Silo format, suitable for visualization tool such as VisIt.
+        PointGridImages.f90: is a supermodule for PointGridImage sub-division
+    
+      FileSystem.f90: is a supermodule for FileSystem sub-division
+   
+    Runtime/
+      InitializeRandomSeed_Command.f90 :  InitializeRandomSeed initialize Fortran random number generator via Unix's pseudorandom generator /dev/urandom.
+      CommandLineOptions_Form.f90:  CommandLineOptions is a class to handle reading and parsing command-line options.
+      WallTime_Function.f90:  Walltime return the current time in seconds since an arbitrary time in the pass. Currently this wraps MPI_WTIME(). 
+      Timer_Form.f90: TimerForm is a class providing timing functionality.
+      Timer_1D__Form.f90: is a class providin arrays of TimerForm
+      GetMemoryUsage_Command.f90:  GetMemoryUsage gets per process and across processes memory usage via reading and parsing of memory info file.
+      GetMemoryUsage_macOS_C.c: C wrapper for the memory usage command on a Mac OS
+      GetMemoryUsage_macOS_Command.f90: gets the memory usage on a Mac OS
+      MemoryUsage_C_macOS.f90: provides an interface to call the C subroutine to get memory usage on Mac OS
+      MemoryUsage_Form.f90: provides an overloaded public interface to obtain memory usage information
+      PROGRAM_HEADER_Singleton.f90:  PROGRAM_HEADER provides functionalities commonly required by all programs (drivers), including initialization of parallel environment, obtaining program parameters, and displaying basic runtime statistics.
+      Runtime.f90: is a supermodule for Runtime sub-division
+
+  Basics.f90: is a supermodule for Basics division
+  

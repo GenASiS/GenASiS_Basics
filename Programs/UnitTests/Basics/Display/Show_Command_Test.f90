@@ -16,7 +16,7 @@ program Show_Command_Test
     Error
   character ( 5 ) :: &
     Encoding
-  type ( MeasuredValueForm ) :: &
+  type ( QuantityForm ) :: &
     Length
   real ( KDR ), dimension ( 5 ), target :: &
     A
@@ -79,8 +79,11 @@ program Show_Command_Test
               'Length in pc' )
   
   Addresses = [ ( c_loc ( A ( iV ) ), iV = 1, size ( A ) ) ]
-  call Show ( c_loc ( A ), 'Address of A' )
   call SHow ( Addresses, 'Elements of A' )
+  !-- FIXME: This breaks on GCC 11.3.0. For some reason it does not resolve
+  !          to Show_C_Pointer, but to Show_C_Pointer_1D, where it causes
+  !          a seg fault.
+  call Show ( c_loc ( A ), 'Address of A' )
   
   call MPI_FINALIZE ( Error )
 

@@ -11,24 +11,25 @@ module ConservationLawStep_Form
       ALPHA_PLUS  = 1, &
       ALPHA_MINUS = 2, &
       N_MODIFIED_SPEEDS = 2, &
-      iTimerCommunication, &
-      iTimerRKStep, &
-      iTimerDifference, &
-      iTimerReconstruction, &
-      iTimerRiemannSolverInput, &
-      iTimerRawFluxes, &
-      iTimerFluxes, &
-      iTimerPrimitive, &
-      iTimerConserved, &
-      iTimerAuxiliary, &
-      iTimerUpdate, &
-      iTimerBoundaryCondition, &
-      iTimerDataTransferDevice, &
-      iTimerDataTransferHost
+      iTimerCommunication = 0, &
+      iTimerRKStep = 0, &
+      iTimerDifference = 0, &
+      iTimerReconstruction = 0, &
+      iTimerRiemannSolverInput = 0, &
+      iTimerRawFluxes = 0, &
+      iTimerFluxes = 0, &
+      iTimerPrimitive = 0, &
+      iTimerConserved = 0, &
+      iTimerAuxiliary = 0, &
+      iTimerUpdate = 0, &
+      iTimerBoundaryCondition = 0, &
+      iTimerDataTransferDevice = 0, &
+      iTimerDataTransferHost = 0
     real ( KDR ) :: &
       LimiterParameter
     type ( StorageForm ) :: &
       Old, &
+      Primitive, &
       DifferenceLeft, &
       DifferenceRight, &
       ReconstructionInner, &
@@ -55,6 +56,8 @@ module ConservationLawStep_Form
       ComputeReconstruction
     procedure, private, pass :: &
       ComputeFluxes
+    procedure, private, pass :: &
+      PrepareTimers
   end type ConservationLawStepForm
   
     private :: &
@@ -69,7 +72,7 @@ module ConservationLawStep_Form
     interface
     
       module subroutine ComputeDifferencesKernel &
-                   ( V, oV, iD, dV_Left, dV_Right )
+                   ( V, oV, iD, dV_Left, dV_Right, UseDeviceOption )
         use Basics
         implicit none
         real ( KDR ), dimension ( :, :, : ), intent ( in ) :: &
@@ -79,10 +82,13 @@ module ConservationLawStep_Form
           iD
         real ( KDR ), dimension ( :, :, : ), intent ( out ) :: &
           dV_Left, dV_Right
+        logical ( KDL ), intent ( in ), optional :: &
+          UseDeviceOption
       end subroutine ComputeDifferencesKernel
 
       module subroutine ComputeReconstructionKernel &
-                   ( V, dV_Left, dV_Right, Theta, V_Inner, V_Outer )
+                   ( V, dV_Left, dV_Right, Theta, V_Inner, V_Outer, &
+                     UseDeviceOption )
         use Basics
         implicit none
         real ( KDR ), dimension ( : ), intent ( in ) :: &
@@ -92,11 +98,13 @@ module ConservationLawStep_Form
           Theta
         real ( KDR ), dimension ( : ), intent ( out ) :: &
           V_Inner, V_Outer
+        logical ( KDL ), intent ( in ), optional :: &
+          UseDeviceOption
       end subroutine ComputeReconstructionKernel
 
       module subroutine ComputeFluxesKernel &
                    ( AP_I, AP_O, AM_I, AM_O, RF_I, RF_O, U_I, U_O, oV, iD, &
-                     F_I, F_O )
+                     F_I, F_O, UseDeviceOption )
         use Basics
         implicit none
         real ( KDR ), dimension ( :, :, : ), intent ( in ) :: &
@@ -109,9 +117,12 @@ module ConservationLawStep_Form
           iD
         real ( KDR ), dimension ( :, :, : ), intent ( out ) :: &
           F_I, F_O
+        logical ( KDL ), intent ( in ), optional :: &
+          UseDeviceOption
       end subroutine ComputeFluxesKernel
 
-      module subroutine ComputeUpdateKernel ( dU, F_I, F_O, V, A, dT )
+      module subroutine ComputeUpdateKernel &
+                   ( dU, F_I, F_O, V, A, dT, UseDeviceOption )
         use Basics
         implicit none
         real ( KDR ), dimension ( : ), intent ( inout ) :: &
@@ -122,19 +133,23 @@ module ConservationLawStep_Form
           V, &
           A, &
           dT
+        logical ( KDL ), intent ( in ), optional :: &
+          UseDeviceOption
       end subroutine ComputeUpdateKernel
       
-      module subroutine AddUpdateKernel ( O, U, C )
+      module subroutine AddUpdateKernel ( O, U, C, UseDeviceOption )
         use Basics
         implicit none
         real ( KDR ), dimension ( : ), intent ( in ) :: &
           O, &
           U
         real ( KDR ), dimension ( : ), intent ( out ) :: &
-          C 
+          C
+        logical ( KDL ), intent ( in ), optional :: &
+          UseDeviceOption
       end subroutine AddUpdateKernel
       
-      module subroutine CombineUpdatesKernel ( C, O, U )
+      module subroutine CombineUpdatesKernel ( C, O, U, UseDeviceOption )
         use Basics
         implicit none
         real ( KDR ), dimension ( : ), intent ( inout ) :: &
@@ -142,6 +157,8 @@ module ConservationLawStep_Form
         real ( KDR ), dimension ( : ), intent ( in ) :: &
           O, &
           U
+        logical ( KDL ), intent ( in ), optional :: &
+          UseDeviceOption
       end subroutine CombineUpdatesKernel
       
     end interface
@@ -169,7 +186,12 @@ contains
     !-- Old
     
     call CLS % Old % Initialize ( [ nCells, CF % N_CONSERVED ] )
-    call CLS % Old % AllocateDevice ( )
+    if ( CF % AllocatedDevice ) &
+      call CLS % Old % AllocateDevice ( )
+    
+    !-- Primitive, an overlay storage
+    call CLS % Primitive % Initialize &
+           ( CF, iaSelectedOption = CF % iaPrimitive )
 
     !-- Differences
 
@@ -183,11 +205,15 @@ contains
              VariableOption &
                = [ ( CF % Variable ( CF % iaPrimitive ( iV ) ), &
                      iV = 1, CF % N_PRIMITIVE ) ] )
-
-    call CLS % DifferenceLeft  % AllocateDevice ( )
-    call CLS % DifferenceRight % AllocateDevice ( )
-    call Clear ( CLS % DifferenceLeft % Value, UseDeviceOption = .true. )
-    call Clear ( CLS % DifferenceRight % Value, UseDeviceOption = .true. )
+    
+    if ( CF % AllocatedDevice ) then
+      call CLS % DifferenceLeft  % AllocateDevice ( )
+      call CLS % DifferenceRight % AllocateDevice ( )
+    end if
+    call Clear ( CLS % DifferenceLeft % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
+    call Clear ( CLS % DifferenceRight % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
 
     !-- Reconstruction
 
@@ -202,10 +228,14 @@ contains
            ( [ nCells, CF % nVariables ], NameOption = 'ReconstructionOuter', &
              VariableOption = CF % Variable )
     
-    call CLS % ReconstructionInner % AllocateDevice ( )
-    call CLS % ReconstructionOuter % AllocateDevice ( )
-    call Clear ( CLS % ReconstructionInner % Value, UseDeviceOption = .true. ) 
-    call Clear ( CLS % ReconstructionOuter % Value, UseDeviceOption = .true. ) 
+    if ( CF % AllocatedDevice ) then
+      call CLS % ReconstructionInner % AllocateDevice ( )
+      call CLS % ReconstructionOuter % AllocateDevice ( )
+    end if 
+    call Clear ( CLS % ReconstructionInner % Value, &
+                 UseDeviceOption = CF % AllocatedDevice ) 
+    call Clear ( CLS % ReconstructionOuter % Value, &
+                 UseDeviceOption = CF % AllocatedDevice ) 
 
     !-- Riemann solver
 
@@ -222,10 +252,14 @@ contains
                = [ 'AlphaPlus                      ', &
                    'AlphaMinus                     ' ] )
     
-    call CLS % ModifiedSpeedsInner % AllocateDevice ( )
-    call CLS % ModifiedSpeedsOuter % AllocateDevice ( )
-    call Clear ( CLS % ModifiedSpeedsInner % Value, UseDeviceOption = .true. )
-    call Clear ( CLS % ModifiedSpeedsOuter % Value, UseDeviceOption = .true. )
+    if ( CF % AllocatedDevice ) then
+      call CLS % ModifiedSpeedsInner % AllocateDevice ( )
+      call CLS % ModifiedSpeedsOuter % AllocateDevice ( )
+    end if
+    call Clear ( CLS % ModifiedSpeedsInner % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
+    call Clear ( CLS % ModifiedSpeedsOuter % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
 
     call CLS % RawFluxInner % Initialize &
            ( [ nCells, CF % N_CONSERVED ], NameOption = 'RawFluxInner', &
@@ -237,10 +271,14 @@ contains
              VariableOption &
                = [ ( CF % Variable ( CF % iaConserved ( iV ) ), &
                      iV = 1, CF % N_CONSERVED ) ] )
-    call CLS % RawFluxInner % AllocateDevice ( )
-    call CLS % RawFluxOuter % AllocateDevice ( )
-    call Clear ( CLS % RawFluxInner % Value, UseDeviceOption = .true. )
-    call Clear ( CLS % RawFluxOuter % Value, UseDeviceOption = .true. )
+    if ( CF % AllocatedDevice ) then
+      call CLS % RawFluxInner % AllocateDevice ( )
+      call CLS % RawFluxOuter % AllocateDevice ( )
+    end if
+    call Clear ( CLS % RawFluxInner % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
+    call Clear ( CLS % RawFluxOuter % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
 
     call CLS % FluxInner % Initialize &
            ( [ nCells, CF % N_CONSERVED ], NameOption = 'FluxInner', &
@@ -252,10 +290,14 @@ contains
              VariableOption &
                = [ ( CF % Variable ( CF % iaConserved ( iV ) ), &
                      iV = 1, CF % N_CONSERVED ) ] )
-    call CLS % FluxInner % AllocateDevice ( )
-    call CLS % FluxOuter % AllocateDevice ( )
-    call Clear ( CLS % FluxInner % Value, UseDeviceOption = .true. )
-    call Clear ( CLS % FluxOuter % Value, UseDeviceOption = .true. )
+    if ( CF % AllocatedDevice ) then
+      call CLS % FluxInner % AllocateDevice ( )
+      call CLS % FluxOuter % AllocateDevice ( )
+    end if
+    call Clear ( CLS % FluxInner % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
+    call Clear ( CLS % FluxOuter % Value, &
+                 UseDeviceOption = CF % AllocatedDevice )
     
     !-- Update
 
@@ -264,42 +306,12 @@ contains
              VariableOption &
                = [ ( CF % Variable ( CF % iaConserved ( iV ) ), &
                      iV = 1, CF % N_CONSERVED ) ] )
-    call CLS % Update % AllocateDevice ( )
+    if ( CF % AllocatedDevice ) &
+      call CLS % Update % AllocateDevice ( )
 
     end associate !-- nCells
-    end associate !-- DM
     
-    call PROGRAM_HEADER % AddTimer &
-           ( 'Communication', CLS % iTimerCommunication, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'RK Step', CLS % iTimerRKStep, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'Update', CLS % iTimerUpdate, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'Difference', CLS % iTimerDifference, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'Reconstruction', CLS % iTimerReconstruction, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'RiemannSolverInput', CLS % iTimerRiemannSolverInput, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'RawFluxes', CLS % iTimerRawFluxes, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'Fluxes', CLS % iTimerFluxes, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'ComputePrimitive', CLS % iTimerPrimitive, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'ComputeConserved', CLS % iTimerConserved, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'ComputeAuxiliary', CLS % iTimerAuxiliary, Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'ApplyBoundaryConditions', CLS % iTimerBoundaryCondition, &
-             Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'DataTransfer to Device', CLS % iTimerDataTransferDevice, &
-             Level = 2 )
-    call PROGRAM_HEADER % AddTimer &
-           ( 'DataTransfer to Host', CLS % iTimerDataTransferHost, &
-             Level = 2 )
+    end associate !-- DM
     
   end subroutine Initialize
 
@@ -313,45 +325,38 @@ contains
 
     integer ( KDI ) :: &
       iV  !-- iVariable
-    type ( StorageForm ) :: &
-      Primitive!, &
-      !Eigenspeed
+    type ( TimerForm ), pointer :: &
+      T_RK, &
+      T_P, &
+      T_A, &
+      T_DT_H, &
+      T_C, &
+      T_DT_D
 
     associate &
       ( CF => CLS % ConservedFields )
     associate &
-      ( DM => CF % DistributedMesh, &
-        Current => CF, &
-        Old => CLS % Old, &
-        Update  => CLS % Update, &
-        iaC => CF % iaConserved, &
-        T_C  => PROGRAM_HEADER % Timer ( CLS % iTimerCommunication ), &
-        T_RK => PROGRAM_HEADER % Timer ( CLS % iTimerRKStep ), &
-        T_A  => PROGRAM_HEADER % Timer ( CLS % iTimerAuxiliary ), &
-        T_P  => PROGRAM_HEADER % Timer ( CLS % iTimerPrimitive ), &
-        T_DT_D  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferDevice ), &
-        T_DT_H  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferHost ) )
-
-    call Show ( 'Preparing Step', CONSOLE % INFO_4 )    
-    call Primitive % Initialize &
-           ( Current, iaSelectedOption = Current % iaPrimitive )
+      ( DM          => CF % DistributedMesh, &
+        Current     => CF, &
+        Old         => CLS % Old, &
+        Primitive   => CLS % Primitive, &
+        Update      => CLS % Update, &
+        iaC  => CF % iaConserved )
     
-    !call Eigenspeed % Initialize &
-    !       ( Current, &
-    !         iaSelectedOption = [ Current % FAST_EIGENSPEED_PLUS ( : ), &
-    !                              Current % FAST_EIGENSPEED_MINUS ( : ) ] )
-
-    call T_DT_D % Start ( )
-    call Current % UpdateDevice ( )
-    call T_DT_D % Stop ( )
+    call CLS % PrepareTimers ( )
     
+    call Show ( 'Preparing Step', CONSOLE % INFO_4 )
+    
+    T_RK  =>  PROGRAM_HEADER % Timer &
+                ( CLS % iTimerRKStep, 'RK Step', Level = 2 )
     call T_RK % Start ( )
     do iV = 1, Current % N_CONSERVED
-      call Copy ( Current % Value ( :, iaC ( iV ) ), &
-                  Old % Value ( :, iV ), UseDeviceOption = .true. )
+      call Copy ( Current % Value ( :, iaC ( iV ) ), Old % Value ( :, iV ), &
+                  UseDeviceOption = Current % AllocatedDevice )
     end do
     call T_RK % Stop ( )
     
+
     !-- Substep 1
     
     call Show ( 'Solving Substep 1', CONSOLE % INFO_4 )
@@ -366,37 +371,50 @@ contains
     !    = Old % Value ( :, iV ) + Update % Value ( :, iV )
       call AddUpdateKernel &
              ( Old % Value ( :, iV ), Update % Value ( :, iV ), &
-               Current % Value ( :, iaC ( iV ) ) )
+               Current % Value ( :, iaC ( iV ) ), &
+               UseDeviceOption = Current % AllocatedDevice )
     end do
     
     call T_RK % Stop ( )
     
     call Show ( 'Computing Fluid', CONSOLE % INFO_5 )
 
+    T_P  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerPrimitive, 'Compute Primitive', Level = 2 )
     call T_P % Start ( )
     call Current % ComputePrimitive ( Current % Value )
     call T_P % Stop ( )
     
+    T_A  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerAuxiliary, 'Compute Auxiliary', Level = 2 )
     call T_A % Start ( )
     call Current % ComputeAuxiliary ( Current % Value )
     call T_A % Stop ( )
     
-    call T_DT_H % Start ( )
-    !call Primitive % UpdateHost ( ) 
-    call Current % UpdateHost ( )
-    call T_DT_H % Stop ( )
-    
-    call Show ( 'Ghost Exchange', CONSOLE % INFO_5 )
+     T_DT_H  =>  PROGRAM_HEADER % Timer &
+                  ( CLS % iTimerDataTransferHost, 'DataTransfer to Host', &
+                    Level = 2 )
+    if ( .not. DM % DevicesCommunicate ) then
+      call T_DT_H % Start ( )
+      call Primitive % UpdateHost ( ) 
+      call T_DT_H % Stop ( )
+    end if
 
+    T_C  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerCommunication, 'Communication', Level = 2 )
     call T_C % Start ( )
     call DM % StartGhostExchange ( )
     call DM % FinishGhostExchange ( )
     call T_C % Stop ( )
     
-    call T_DT_D % Start ( )
-    !call Primitive % UpdateDevice ( )
-    call Current % UpdateDevice ( )
-    call T_DT_D % Stop ( )
+    T_DT_D  =>  PROGRAM_HEADER % Timer &
+                  ( CLS % iTimerDataTransferDevice, 'DataTransfer to Device', &
+                    Level = 2 )
+    if ( .not. DM % DevicesCommunicate ) then
+      call T_DT_D % Start ( )
+      call Primitive % UpdateDevice ( )
+      call T_DT_D % Stop ( )
+    end if
     
     !-- Substep 2
     
@@ -416,7 +434,8 @@ contains
       !                + Current % Value ( :, iaC ( iV ) ) )
       call CombineUpdatesKernel &
              ( Current % Value ( :, iaC ( iV ) ), &
-               Old % Value ( :, iV ), Update % Value ( :, iV ) )
+               Old % Value ( :, iV ), Update % Value ( :, iV ), &
+               UseDeviceOption = Current % AllocatedDevice )
     end do
     call T_RK % Stop ( )
     
@@ -430,26 +449,22 @@ contains
     call Current % ComputeAuxiliary ( Current % Value )
     call T_A % Stop ( )
     
-    call T_DT_H % Start ( )
-    !call Primitive % UpdateHost ( ) 
-    call Current % UpdateHost ( ) 
-    call T_DT_H % Stop ( )
+    if ( .not. DM % DevicesCommunicate ) then
+      call T_DT_H % Start ( )
+      call Primitive % UpdateHost ( ) 
+      call T_DT_H % Stop ( )
+    end if
     
-    call Show ( 'Ghost Exchange', CONSOLE % INFO_5 )
-
     call T_C % Start ( )
     call DM % StartGhostExchange ( )
     call DM % FinishGhostExchange ( )
     call T_C % Stop ( )
     
-    call T_DT_H % Start ( )
-    !call Primitive % UpdateHost ( ) 
-    call Current % UpdateDevice ( ) 
-    call T_DT_H % Stop ( )
-    
-    !call T_DT_H % Start ( )
-    !call Eigenspeed % UpdateHost ( ) 
-    !call T_DT_H % Stop ( )
+    if ( .not. DM % DevicesCommunicate ) then
+      call T_DT_D % Start ( )
+      call Primitive % UpdateDevice ( ) 
+      call T_DT_D % Stop ( )
+    end if
     
     end associate !-- DM, etc.
     end associate !-- CF
@@ -467,14 +482,15 @@ contains
     integer ( KDI ) :: &
       iD, &  !-- iDimension
       iV
+    type ( TimerForm ), pointer :: &
+      T_U
 
     call Show ( 'Computing Update', CONSOLE % INFO_5 )
     
     associate ( CF => CLS % ConservedFields )
     associate ( DM => CF % DistributedMesh )
-    associate ( T_U => PROGRAM_HEADER % Timer ( CLS % iTimerUpdate ) )
 
-    call Clear ( CLS % Update % Value, UseDeviceOption = .true. )
+    call Clear ( CLS % Update % Value, UseDeviceOption = CF % AllocatedDevice )
     
     do iD = 1, DM % nDimensions
 
@@ -484,19 +500,21 @@ contains
       call CLS % ComputeReconstruction ( )
       call CLS % ComputeFluxes ( iD )
       
+      T_U  =>  PROGRAM_HEADER % Timer &
+                 ( CLS % iTimerUpdate, 'Update', Level = 2 )
       call T_U % Start ( )
       do iV = 1, CF % N_CONSERVED
         call ComputeUpdateKernel &
                ( CLS % Update % Value ( :, iV ), &
                  CLS % FluxInner % Value ( :, iV ), &
                  CLS % FluxOuter % Value ( :, iV ), DM % CellVolume, &
-                 DM % CellArea ( iD ), TimeStep )
+                 DM % CellArea ( iD ), TimeStep, &
+                 UseDeviceOption = CF % AllocatedDevice )
       end do
       call T_U % Stop ( )
 
     end do
     
-    end associate !-- T_DT_D, etc.
     end associate !-- DM
     end associate !-- CF
 
@@ -516,22 +534,28 @@ contains
       V, &
       dV_Left, &
       dV_Right
+    type ( TimerForm ), pointer :: &
+      T_BC, &
+      T_D
 
     associate ( CF => CLS % ConservedFields )
     associate ( DM => CF % DistributedMesh )
-    associate &
-      ( T_DT_D  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferDevice ), &
-        T_DT_H  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferHost ), &
-        T_D     => PROGRAM_HEADER % Timer ( CLS % iTimerDifference ), &
-        T_BC    => PROGRAM_HEADER % Timer ( CLS % iTimerBoundaryCondition ) )
     
+    T_BC  =>  PROGRAM_HEADER % Timer &
+                ( CLS % iTimerBoundaryCondition, 'ApplyBoundaryConditions', &
+                  Level = 2 )
     call T_BC % Start ( )
     call CF % ApplyBoundaryConditions &
-           ( CF % Value, CF % Value, iD, iBoundary = -1 )
+           ( CF % Value, CF % Value, iD, iBoundary = -1, &
+             PrimitiveOnlyOption = .true. )
     call CF % ApplyBoundaryConditions &
-           ( CF % Value, CF % Value, iD, iBoundary = +1 )
+           ( CF % Value, CF % Value, iD, iBoundary = +1, &
+             PrimitiveOnlyOption = .true. )
     call T_BC % Stop ( )
            
+    T_D  =>  PROGRAM_HEADER % Timer &
+                ( CLS % iTimerDifference, 'Difference', &
+                  Level = 2 )
     do iP = 1, CF % N_PRIMITIVE
       call DM % SetVariablePointer &
              ( CF % Value ( :, CF % iaPrimitive ( iP ) ), V )
@@ -541,13 +565,13 @@ contains
              ( CLS % DifferenceRight % Value ( :, iP ), dV_Right )
       call T_D % Start ( )
       call ComputeDifferencesKernel &
-             ( V, DM % nGhostLayers ( iD ), iD, dV_Left, dV_Right )
+             ( V, DM % nGhostLayers ( iD ), iD, dV_Left, dV_Right, &
+               UseDeviceOption = CF % AllocatedDevice )
       call T_D % Stop ( )
     end do
     
     nullify ( V, dV_Left, dV_Right )
     
-    end associate !-- T_DT
     end associate !-- DM
     end associate !-- CF
 
@@ -561,17 +585,16 @@ contains
 
     integer ( KDI ) :: &
       iP  !-- iPrimitive
+    type ( TimerForm ), pointer :: &
+      T_R, &
+      T_A, &
+      T_C
 
     associate ( CF => CLS % ConservedFields )
     associate ( iaP => CF % iaPrimitive )
     
-    associate &
-      ( T_DT_D  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferDevice ), &
-        T_DT_H  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferHost ), &
-        T_R     => PROGRAM_HEADER % Timer ( CLS % iTimerReconstruction ), &
-        T_A     => PROGRAM_HEADER % Timer ( CLS % iTimerAuxiliary ), &
-        T_C     => PROGRAM_HEADER % Timer ( CLS % iTimerConserved ) )
-    
+    T_R  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerReconstruction, 'Reconstruction', Level = 2 )
     do iP = 1, CF % N_PRIMITIVE
       call T_R % Start ( )
       call ComputeReconstructionKernel &
@@ -580,27 +603,29 @@ contains
                CLS % DifferenceRight % Value ( :, iP ), &
                CLS % LimiterParameter, &
                CLS % ReconstructionInner % Value ( :, iaP ( iP ) ), &
-               CLS % ReconstructionOuter % Value ( :, iaP ( iP ) ) )
+               CLS % ReconstructionOuter % Value ( :, iaP ( iP ) ), &
+               UseDeviceOption = CF % AllocatedDevice )
       call T_R % Stop ( )
     end do
 
+    T_A  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerAuxiliary, 'ComputeAuxiliary', Level = 2 )
     call T_A % Start ( )
     call CF % ComputeAuxiliary &
            ( CLS % ReconstructionInner % Value )
     call CF % ComputeAuxiliary &
-           ( CLS % ReconstructionOuter % Value )
-             
+           ( CLS % ReconstructionOuter % Value )             
     call T_A % Stop ( )
     
+    T_C  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerConserved, 'ComputeConserved', Level = 2 )
     call T_C % Start ( )
     call CF % ComputeConserved &
            ( CLS % ReconstructionInner % Value )
     call CF % ComputeConserved &
-           ( CLS % ReconstructionOuter % Value )
-             
+           ( CLS % ReconstructionOuter % Value )             
     call T_C % Stop ( )
     
-    end associate !-- Timer
     end associate !-- iaP
     end associate !-- CF
 
@@ -622,18 +647,20 @@ contains
       RF_I, RF_O, &
       U_I, U_O, &
       F_I, F_O
+    type ( TimerForm ), pointer :: &
+      T_BC, &
+      T_F, &
+      T_RF, &
+      T_RSI
 
     associate ( CF => CLS % ConservedFields )
     associate &
       ( DM  => CF % DistributedMesh, &
-        iaC => CF % iaConserved, &
-        T_DT_D  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferDevice ), &
-        T_DT_H  => PROGRAM_HEADER % Timer ( CLS % iTimerDataTransferHost ), &
-        T_RSI => PROGRAM_HEADER % Timer ( CLS % iTimerRiemannSolverInput ), &
-        T_RF  => PROGRAM_HEADER % Timer ( CLS % iTimerRawFluxes ), &
-        T_F   => PROGRAM_HEADER % Timer ( CLS % iTimerFluxes ), &
-        T_BC  => PROGRAM_HEADER % Timer ( CLS % iTimerBoundaryCondition ) )
+        iaC => CF % iaConserved )
 
+    T_BC  =>  PROGRAM_HEADER % Timer &
+                ( CLS % iTimerBoundaryCondition, 'ApplyBoundaryConditions', &
+                  Level = 2 )
     call T_BC % Start ( )
     call CF % ApplyBoundaryConditions &
            ( CLS % ReconstructionOuter % Value, &
@@ -644,12 +671,18 @@ contains
              CLS % ReconstructionOuter % Value, iDimension, iBoundary = +1 )
     call T_BC % Stop ( )
 
+    T_RSI  =>  PROGRAM_HEADER % Timer &
+                 ( CLS % iTimerRiemannSolverInput, 'RiemannSolverInput', &
+                   Level = 2 )
     call T_RSI % Start ( )
     call CF % ComputeRiemannSolverInput &
            ( CLS, CLS % ReconstructionInner % Value, &
              CLS % ReconstructionOuter % Value, iDimension )
     call T_RSI % Stop ( )
 
+    T_RF  =>  PROGRAM_HEADER % Timer &
+                ( CLS % iTimerRawFluxes, 'RawFluxes', &
+                  Level = 2 )
     call T_RF % Start ( )
     call CF % ComputeRawFluxes &
            ( CLS % RawFluxInner % Value, CLS % ReconstructionInner % Value, &
@@ -668,6 +701,9 @@ contains
     call DM % SetVariablePointer &
            ( CLS % ModifiedSpeedsOuter % Value ( :, CLS % ALPHA_MINUS ), AM_O )
 
+    T_F  =>  PROGRAM_HEADER % Timer &
+               ( CLS % iTimerFluxes, 'Fluxes', &
+                 Level = 2 )
     do iV = 1, CF % N_CONSERVED
       call DM % SetVariablePointer ( CLS % RawFluxInner % Value ( :, iV ), RF_I)
       call DM % SetVariablePointer ( CLS % RawFluxOuter % Value ( :, iV ), RF_O)
@@ -680,7 +716,8 @@ contains
       call T_F % Start ( )
       call ComputeFluxesKernel &
              ( AP_I, AP_O, AM_I, AM_O, RF_I, RF_O, U_I, U_O, &
-               DM % nGhostLayers ( iDimension ), iDimension, F_I, F_O )
+               DM % nGhostLayers ( iDimension ), iDimension, F_I, F_O, &
+               UseDeviceOption = CF % AllocatedDevice )
       call T_F % Stop ( )
     end do
     
@@ -689,6 +726,63 @@ contains
     end associate !-- CF
 
   end subroutine ComputeFluxes
+  
+  
+  subroutine PrepareTimers ( CLS )
+
+    class ( ConservationLawStepForm ), intent ( inout ) :: &
+      CLS
+      
+    type ( TimerForm ), pointer :: &
+      T
+      
+    associate ( DM => CLS % ConservedFields % DistributedMesh )
+    
+    !-- Force Timers creation in certain order
+    
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerCommunication, 'Communication', Level = 2 )
+    
+    if ( CONSOLE % Verbosity >= CONSOLE % INFO_3 ) then
+      T => PROGRAM_HEADER % Timer &
+             ( DM % iTimerPacking, 'Pack/Unpack', Level = 3 )
+      T => PROGRAM_HEADER % Timer &
+             ( DM % iTimerComm, 'Send/Recv', Level = 3 )
+    end if
+    
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerRKStep, 'RK Step', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerUpdate, 'Update', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerDifference, 'Difference', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerReconstruction, 'Reconstruction', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerRiemannSolverInput, 'RiemannSolverInput', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerRawFluxes, 'RawFluxes', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerFluxes, 'Fluxes', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerPrimitive, 'ComputePrimitive', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerConserved, 'ComputeConserved', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerAuxiliary, 'ComputeAuxiliary', Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerBoundaryCondition, 'ApplyBoundaryConditions', &
+              Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerDataTransferDevice, 'DataTransfer to Device', &
+             Level = 2 )
+    T => PROGRAM_HEADER % Timer &
+           ( CLS % iTimerDataTransferHost, 'DataTransfer to Host', &
+             Level = 2 )
+    
+    end associate !-- DM
+      
+  end subroutine PrepareTimers
 
 
 end module ConservationLawStep_Form

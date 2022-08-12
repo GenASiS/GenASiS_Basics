@@ -5,6 +5,7 @@ program GetMemoryUsage_Command_Test
   use Display
   use MessagePassing
   use CommandLineOptions_Form
+  use MemoryUsage_C_macOS
   use GetMemoryUsage_Command
 
   implicit none
@@ -13,7 +14,10 @@ program GetMemoryUsage_Command_Test
     iStrg, &
     nValues, &
     DisplayRank
-  type ( MeasuredValueForm ) :: &
+  double precision, target :: &
+    HWM_kB, &
+    RSS_kB
+  type ( QuantityForm ) :: &
     HighWaterMark, &
     AcrossProcessesMinHighWaterMark, &
     AcrossProcessesMaxHighWaterMark, &

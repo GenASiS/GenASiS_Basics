@@ -1,5 +1,6 @@
 include $(PATH_BASICS)/Makefile_ObjectFiles
 
 MODULES = \
+  GenASiS.o \
   $(BASICS)
 

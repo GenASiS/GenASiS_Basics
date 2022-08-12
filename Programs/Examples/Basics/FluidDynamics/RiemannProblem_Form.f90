@@ -7,8 +7,12 @@ module RiemannProblem_Form
   implicit none
   private
 
-  type, public, extends ( ConservationLawEvolutionTemplate) :: &
+  type, public, extends ( ConservationLawEvolutionTemplate ) :: &
     RiemannProblemForm
+  type ( QuantityForm ), private :: &
+    DensityUnit, &
+    EnergyUnit, &
+    SpeedUnit
   contains
     procedure, private, pass :: &
       Initialize_RP
@@ -17,6 +21,9 @@ module RiemannProblem_Form
     final :: &
       Finalize
   end type RiemannProblemForm
+  
+    private :: &
+      SetInitial
 
 contains
 
@@ -26,21 +33,10 @@ contains
     class ( RiemannProblemForm ), intent ( inout ) :: &
       RP
 
-    integer ( KDI ) :: &
-      iV
-    real ( KDR ) :: &
-      Density_L, Density_R, &  !-- Left and Right
-      Pressure_L, Pressure_R, &
-      Speed_L, Speed_R, &
-      AdiabaticIndex, &
-      SinTheta, CosTheta, &
-      SinPhi, CosPhi
-    real ( KDR ), dimension ( 3 ) :: &
-      DP_1, DP_2, DP_3, &  !-- DiscontinuityPoint_1, etc.
-      Normal, &
-      UnitNormal
-    type ( MeasuredValueForm ) :: &
-      DensityUnit, &
+    type ( StorageForm ) :: &
+      Primitive
+    type ( QuantityForm ) :: &
+      DensityUnit,  &
       EnergyUnit, &
       SpeedUnit
 
@@ -57,9 +53,66 @@ contains
     type is ( PolytropicFluidForm )
 
     call PF % Initialize ( DM, NameOption = 'PolytropicFluid' )
-    call PF % AllocateDevice ( )
     
-    call DM % SetGhostExchange ( PF )
+    if ( RP % UseDevice ) &
+      call PF % AllocateDevice ( )
+    
+    call Primitive % Initialize ( PF, iaSelectedOption = PF % iaPrimitive )
+    call DM % SetGhostExchange ( Primitive )
+    
+    RP % DensityUnit  = UNIT % IDENTITY
+    RP % EnergyUnit   = UNIT % IDENTITY
+    RP % SpeedUnit    = DM % CoordinateUnit ( 1 ) / RP % TimeUnit
+
+    call SetInitial ( PF, RP )
+    
+    call PF % ComputeAuxiliaryFromPressure ( PF % Value )
+    call PF % ComputeConserved ( PF % Value, UseDeviceOption = .false. )
+    
+    call PF % SetOutputPolytropic &
+           ( VelocityUnitOption = spread ( RP % SpeedUnit, 1, 3 ), &
+             DensityUnitOption = RP % DensityUnit, &
+             EnergyUnitOption = RP % EnergyUnit )
+    
+    end select    !-- PF
+    end associate !-- DM
+
+  end subroutine Initialize_RP 
+  
+  
+  subroutine Finalize ( RP )
+
+    type ( RiemannProblemForm ), intent ( inout ) :: &
+      RP
+
+    if ( allocated ( RP % ConservedFields ) ) &
+      deallocate ( RP % ConservedFields )
+
+  end subroutine Finalize
+  
+  
+  subroutine SetInitial ( PF, RP )
+  
+    class ( PolytropicFluidForm ), intent ( inout ) :: &
+      PF
+    type ( RiemannProblemForm ), intent ( inout ) :: &
+      RP
+    
+    integer ( KDI ) :: &
+      iV
+    real ( KDR ) :: &
+      Density_L, Density_R, &  !-- Left and Right
+      Pressure_L, Pressure_R, &
+      Speed_L, Speed_R, &
+      AdiabaticIndex, &
+      SinTheta, CosTheta, &
+      SinPhi, CosPhi
+    real ( KDR ), dimension ( 3 ) :: &
+      DP_1, DP_2, DP_3, &  !-- DiscontinuityPoint_1, etc.
+      Normal, &
+      UnitNormal
+      
+    associate ( DM => RP % DistributedMesh )
 
     !-- Left and Right states
 
@@ -71,29 +124,25 @@ contains
     Speed_R        = 0.0_KDR
     AdiabaticIndex = 1.4_KDR
 
-    DensityUnit  = UNIT % IDENTITY
-    EnergyUnit   = UNIT % IDENTITY
-    SpeedUnit = DM % CoordinateUnit ( 1 ) / RP % TimeUnit
- 
     call PROGRAM_HEADER % GetParameter &
-           ( Density_L, 'DensityLeft', InputUnitOption = DensityUnit )
+           ( Density_L, 'DensityLeft', InputUnitOption = RP % DensityUnit )
     call PROGRAM_HEADER % GetParameter &
-           ( Pressure_L, 'PressureLeft', InputUnitOption = EnergyUnit )
+           ( Pressure_L, 'PressureLeft', InputUnitOption = RP % EnergyUnit )
     call PROGRAM_HEADER % GetParameter &
-           ( Speed_L, 'SpeedLeft', InputUnitOption = SpeedUnit )
+           ( Speed_L, 'SpeedLeft', InputUnitOption = RP % SpeedUnit )
     call PROGRAM_HEADER % GetParameter &
-           ( Density_R, 'DensityRight', InputUnitOption = DensityUnit )
+           ( Density_R, 'DensityRight', InputUnitOption = RP % DensityUnit )
     call PROGRAM_HEADER % GetParameter &
-           ( Pressure_R, 'PressureRight', InputUnitOption = EnergyUnit )
+           ( Pressure_R, 'PressureRight', InputUnitOption = RP % EnergyUnit )
     call PROGRAM_HEADER % GetParameter &
-           ( Speed_R, 'SpeedRight', InputUnitOption = SpeedUnit )
+           ( Speed_R, 'SpeedRight', InputUnitOption = RP % SpeedUnit )
     call PROGRAM_HEADER % GetParameter ( AdiabaticIndex, 'AdiabaticIndex' )
     
     !-- Three points define the plane of discontinuity
 
-    DP_1 = [ 0.5_KDR, 0.0_KDR, 0.0_KDR ]
-    DP_2 = [ 0.0_KDR, 0.5_KDR, 0.0_KDR ]
-    DP_3 = [ 0.0_KDR, 0.0_KDR, 0.5_KDR ]
+    DP_1 = [ 0.500001_KDR, 0.0_KDR, 0.0_KDR ]
+    DP_2 = [ 0.0_KDR, 0.500001_KDR, 0.0_KDR ]
+    DP_3 = [ 0.0_KDR, 0.0_KDR, 0.500001_KDR ]
 
     if ( DM % nDimensions < 3 ) DP_3 ( 3 ) = 0.1 * sqrt ( huge ( 1.0_KDR ) )
     if ( DM % nDimensions < 2 ) DP_2 ( 2 ) = 0.1 * sqrt ( huge ( 1.0_KDR ) )
@@ -193,32 +242,12 @@ contains
       end if 
     end do
     Gamma = AdiabaticIndex
-
-    call PF % ComputeAuxiliaryFromPressure ( PF % Value )
-    call PF % ComputeConserved ( PF % Value, UseDeviceOption = .false. )
-
-    call PF % SetOutputPolytropic &
-           ( VelocityUnitOption = spread ( SpeedUnit, 1, 3 ), &
-             DensityUnitOption = DensityUnit, EnergyUnitOption = EnergyUnit )
-
-    call PF % UpdateDevice ( )
     
     end associate !-- X, etc.
-    end select !-- PF
+    
     end associate !-- DM
 
-  end subroutine Initialize_RP
-
-
-  subroutine Finalize ( RP )
-
-    type ( RiemannProblemForm ), intent ( inout ) :: &
-      RP
-
-    if ( allocated ( RP % ConservedFields ) ) &
-      deallocate ( RP % ConservedFields )
-
-  end subroutine Finalize
+  end subroutine SetInitial
 
 
 end module RiemannProblem_Form

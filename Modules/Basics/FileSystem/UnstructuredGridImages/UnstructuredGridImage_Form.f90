@@ -66,7 +66,7 @@ contains
       nProperCells, &
       nGhostCells, &
       oValue
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
       CoordinateUnitOption
 
     UGI % oValue      = oValue
@@ -134,7 +134,7 @@ contains
 
     class ( UnstructuredGridImageForm ), intent ( inout ) :: &
       GI
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
@@ -159,11 +159,13 @@ contains
   end subroutine Write 
   
   
-  subroutine Read ( GI, TimeOption, CycleNumberOption )
+  subroutine Read ( GI, StorageOnlyOption, TimeOption, CycleNumberOption )
   
     class ( UnstructuredGridImageForm ), intent ( inout ) :: &
       GI
-    type ( MeasuredValueForm ), intent ( out ), optional :: &
+    logical ( KDL ), intent ( in ), optional :: &
+      StorageOnlyOption
+    type ( QuantityForm ), intent ( out ), optional :: &
       TimeOption
     integer ( KDI ), intent ( out ), optional :: &
       CycleNumberOption
@@ -171,12 +173,18 @@ contains
     integer ( KDI ) :: &
       iStrg, &
       nVariables 
+    logical ( KDL ) :: &
+      StorageOnly
     character ( LDL ), dimension ( : ), allocatable :: &
       StorageName, &
       VariableName
     character ( LDF ) :: &
       WorkingDirectory
-      
+    
+    StorageOnly = .false.
+    if ( present ( StorageOnlyOption ) ) &
+      StorageOnly = StorageOnlyOption
+    
     if ( .not. GI % Stream % IsReadable ( ) ) return
     
     WorkingDirectory = GI % Stream % CurrentDirectory
@@ -185,39 +193,43 @@ contains
       
     call GI % ReadHeader ( TimeOption, CycleNumberOption )
     
-    call GI % ReadMesh ( )
+    if ( .not. StorageOnly ) then
     
-    !-- prepare Storage to read into
-    if ( GI % nStorages == 0 ) then
-      call GI % Stream % ListContents ( ContentTypeOption = 'Directory' )
-      GI % nStorages = size ( GI % Stream % ContentList )
-!-- FIXME: NAG 5.3.1 should support sourced allocation
-!      allocate ( StorageName, source = GI % Stream % ContentList )
-      allocate ( StorageName ( size ( GI % Stream % ContentList ) ) )
-      StorageName = GI % Stream % ContentList
-      do iStrg = 1, GI % nStorages
-        if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
-          call GI % Stream % ChangeDirectory ( StorageName ( iStrg ) )
-        call GI % Stream % ListContents &
-               ( ContentTypeOption = 'UnstructuredGridVariable' )
-        if ( allocated ( VariableName ) ) deallocate ( VariableName )
-!        allocate ( VariableName, source = GI % Stream % ContentList )
-        allocate ( VariableName ( size ( GI % Stream % ContentList ) ) )
-        VariableName = GI % Stream % ContentList 
-        nVariables = size ( GI % Stream % ContentList )
-        if ( nVariables == 0 ) then
-          GI % nStorages = 0
-        else
-          call GI % Storage ( iStrg ) % Initialize &
-                 ( [ GI % nTotalCells, nVariables ], &
-                   VariableOption = VariableName, & 
-                   NameOption = StorageName ( iStrg ) )
-        end if
-        if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
-          call GI % Stream % ChangeDirectory ( '..' )
-      end do
-    end if
+      call GI % ReadMesh ( )
       
+      !-- prepare Storage to read into
+      if ( GI % nStorages == 0 ) then
+        call GI % Stream % ListContents ( ContentTypeOption = 'Directory' )
+        GI % nStorages = size ( GI % Stream % ContentList )
+  !-- FIXME: NAG 5.3.1 should support sourced allocation
+  !      allocate ( StorageName, source = GI % Stream % ContentList )
+        allocate ( StorageName ( size ( GI % Stream % ContentList ) ) )
+        StorageName = GI % Stream % ContentList
+        do iStrg = 1, GI % nStorages
+          if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
+            call GI % Stream % ChangeDirectory ( StorageName ( iStrg ) )
+          call GI % Stream % ListContents &
+                 ( ContentTypeOption = 'UnstructuredGridVariable' )
+          if ( allocated ( VariableName ) ) deallocate ( VariableName )
+  !        allocate ( VariableName, source = GI % Stream % ContentList )
+          allocate ( VariableName ( size ( GI % Stream % ContentList ) ) )
+          VariableName = GI % Stream % ContentList 
+          nVariables = size ( GI % Stream % ContentList )
+          if ( nVariables == 0 ) then
+            GI % nStorages = 0
+          else
+            call GI % Storage ( iStrg ) % Initialize &
+                   ( [ GI % nTotalCells, nVariables ], &
+                     VariableOption = VariableName, & 
+                     NameOption = StorageName ( iStrg ) )
+          end if
+          if ( len_trim ( StorageName ( iStrg ) ) > 0 ) &
+            call GI % Stream % ChangeDirectory ( '..' )
+        end do
+      end if
+    
+    end if
+        
     call GI % ReadStorage ( )
     
     call GI % Stream % ChangeDirectory ( WorkingDirectory )
@@ -260,7 +272,7 @@ contains
 
     class ( UnstructuredGridImageForm ), intent ( inout ) :: &
       UGI
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
@@ -375,7 +387,7 @@ contains
 
     class ( UnstructuredGridImageForm ), intent ( inout ) :: &
       UGI
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
@@ -521,7 +533,7 @@ contains
     end do
    
   end subroutine WriteStorage
-  
+    
   
   subroutine ReadMesh ( UGI )
     

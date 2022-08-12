@@ -15,6 +15,10 @@ module Storage_Form
   private
   
   type, public :: StorageForm
+    type ( c_ptr ), private :: &
+      D_Value = c_null_ptr  !-- Device pointer to Value
+    type ( c_ptr ), dimension ( : ), allocatable, private :: &
+      D_Selected     !-- Device pointer for Selected Value
     integer ( KDI ) :: &
       nValues     = 0, &
       nVariables  = 0, &
@@ -25,19 +29,19 @@ module Storage_Form
       iaSelected, &
       lVariable, &
       lVector
-    real ( KDR ), dimension ( :, : ), pointer :: &
+    real ( KDR ), dimension ( :, : ), pointer, contiguous :: &
       Value => null (  )
     logical ( KDL ) :: &
-      AllocatedValue = .false., &
-      Pinned = .false.
+      AllocatedValue  = .false., &
+      AllocatedDevice = .false., &
+      ClearRequested  = .false., &
+      Pinned          = .false.
     character ( LDF ) :: &
       Name = ''
     character ( LDL ), dimension ( : ), allocatable :: &
       Variable, &
       Vector
-    type ( c_ptr ), dimension ( : ), allocatable :: &
-      D_Selected     !-- Device pointer for Selected Value
-    type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
+    type ( QuantityForm ), dimension ( : ), allocatable :: &
       Unit
     type ( Integer_1D_Form ), dimension ( : ), allocatable :: &
       VectorIndices
@@ -57,6 +61,10 @@ module Storage_Form
       Initialize => InitializeAllocate, InitializeClone
     procedure, public, pass :: &
       AllocateDevice => AllocateDevice_S
+    procedure, public, pass :: &
+      Clear => Clear_S
+    procedure, public, pass :: &
+      ReassociateHost
     procedure, private, pass :: &
       UpdateDeviceAll
     procedure, private, pass :: &
@@ -69,12 +77,19 @@ module Storage_Form
       UpdateHostSingle
     generic :: &
       UpdateHost => UpdateHostAll, UpdateHostSingle
+    procedure, public, pass :: &
+      ShowAssociation
+    procedure, private, pass :: &
+      AssociateHost_S
+    procedure, private, pass :: &
+      DisassociateHost_S
     final :: &
       Finalize
   end type StorageForm
 
     private :: &
-      InitializeOptionalMembers
+      InitializeOptionalMembers, &
+      AdjustNonPrimary_D_Selected
 
 contains
 
@@ -90,7 +105,7 @@ contains
       ValueShape
     type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional :: &
       VectorIndicesOption
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
     character ( * ), dimension ( : ), intent ( in ), optional :: &
       VectorOption, &
@@ -103,8 +118,6 @@ contains
     
     integer ( KDI ) :: &
       iVrbl
-    logical ( KDL ) :: &
-      ClearRequested
 
     S % nValues = ValueShape ( 1 )
     
@@ -122,9 +135,8 @@ contains
     end if
     S % AllocatedValue = .true.
     
-    ClearRequested = .false.
-    if ( present ( ClearOption ) ) ClearRequested = ClearOption
-    if ( ClearRequested ) call Clear ( S % Value )  
+    if ( present ( ClearOption ) ) S % ClearRequested = ClearOption
+    if ( S % ClearRequested ) call Clear ( S % Value )  
     
     allocate ( S % D_Selected ( S % nVariables ) )
     S % D_Selected = c_null_ptr
@@ -146,7 +158,7 @@ contains
 !      Value
 !    type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
 !      VectorIndicesOption
-!    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+!    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
 !      UnitOption
 !    character ( * ), dimension ( : ), intent ( in ), optional :: &
 !      VectorOption, &
@@ -239,7 +251,9 @@ contains
     end if
   
     S_Target % Value => S_Source % Value
-    S_Target % AllocatedValue = .false.
+    S_Target % AllocatedValue   = .false.
+    S_Target % AllocatedDevice  = S_Source % AllocatedDevice
+    S_Target % Pinned           = S_Source % Pinned
     
     if ( .not. present ( NameOption ) ) &
       S_Target % Name = trim ( S_Source % Name )
@@ -277,17 +291,7 @@ contains
     if ( .not. present ( iaSelectedOption ) ) then
       S_Target % D_Selected = S_Source % D_Selected
     else
-      S_Target % D_Selected = c_null_ptr
-      do iS_T = 1, S_Target % nVariables
-        iV = S_Target % iaSelected ( iS_T )
-        do iS_S = 1, S_Target % Primary % nVariables
-          if ( iV == S_Target % Primary % iaSelected ( iS_S ) ) then
-            S_Target % D_Selected ( iS_T ) &
-              = S_Target % Primary % D_Selected ( iS_S )
-            exit
-          end if
-        end do
-      end do
+      call AdjustNonPrimary_D_Selected ( S_Target )
     end if
     
     call InitializeOptionalMembers &
@@ -297,44 +301,100 @@ contains
   end subroutine InitializeClone
   
   
-  subroutine AllocateDevice_S ( S )
+  subroutine AllocateDevice_S ( S, AssociateVariablesOption )
   
     class ( StorageForm ), intent ( inout ) :: &
       S
+    logical ( KDL ), intent ( in ), optional :: &
+      AssociateVariablesOption
       
-    integer ( KDI ) :: &
-      iV
-    real ( KDR ), dimension ( : ), pointer :: &
-      Variable
-    real ( KDR ), dimension ( :, : ), pointer :: &
-      Scratch
+    logical ( KDL ) :: &
+      AssociateVariables
     
     if ( S % AllocatedValue ) then
-      call AllocateDevice &
-             ( S % nValues * S % nVariables, S % D_Selected ( 1 ) )
-      call c_f_pointer &
-             ( S % D_Selected ( 1 ), Scratch, [ S % nValues, S % nVariables ] )
       
-      Variable => S % Value ( :, 1 )
-      call AssociateHost ( S % D_Selected ( 1 ), Variable )
+      AssociateVariables = .true.
+      if ( present ( AssociateVariablesOption ) ) &
+        AssociateVariables = AssociateVariablesOption
+
+      call AllocateDevice ( S % nValues * S % nVariables, S % D_Value )
       
-      do iV = 2, S % nVariables
-        S % D_Selected ( iV ) = c_loc ( Scratch ( :, iV ) )
-        Variable => S % Value ( :, iV )
-        call AssociateHost ( S % D_Selected ( iV ), Variable )
-      end do
-    
-    end if
+      if ( .not. c_associated ( S % D_Value ) ) &
+        return
+      
+      call S % AssociateHost_S ( AssociateVariables )
+      
+      S % AllocatedDevice = .true.
+      
+      if ( S % ClearRequested ) &
+        call Clear ( S % Value, UseDeviceOption = .true. )
+      
+    else
+      
+      call AdjustNonPrimary_D_Selected ( S )
+      
+    end if !-- S % AllocatedValue
   
   end subroutine AllocateDevice_S
   
   
+  subroutine ReassociateHost ( S, AssociateVariablesOption )
+  
+    class ( StorageForm ), intent ( inout ), target :: &
+      S
+    logical ( KDL ), intent ( in ), optional :: &
+      AssociateVariablesOption
+    
+    logical ( KDL ) :: &
+      AssociateVariables
+    class ( StorageForm ), pointer :: &
+      S_Primary
+      
+    if ( .not. S % AllocatedDevice ) &
+      return
+    
+    AssociateVariables = .true.
+    if ( present ( AssociateVariablesOption ) ) &
+      AssociateVariables = AssociateVariablesOption
+      
+    if ( S % AllocatedValue ) then
+      call S % DisassociateHost_S ( )
+      call S % AssociateHost_S ( AssociateVariables )
+    else
+      S_Primary => S % Primary
+      call S_Primary % DisassociateHost_S ( )
+      call S_Primary % AssociateHost_S ( AssociateVariables )
+      call AdjustNonPrimary_D_Selected ( S )
+    end if
+    
+  end subroutine ReassociateHost
+
+
+  subroutine Clear_S ( S )
+
+    class ( StorageForm ), intent ( inout ) :: &
+      S
+
+    integer ( KDI ) :: &
+      iS  !-- iSelected
+
+    do iS = 1, S % nVariables
+      call Clear ( S % Value ( :, S % iaSelected ( iS ) ), &
+                   UseDeviceOption = S % AllocatedDevice )
+    end do !-- iS
+
+  end subroutine Clear_S
+
+
   subroutine UpdateDeviceAll ( S )
   
     class ( StorageForm ), intent ( inout ) :: &
       S
     integer ( KDI ) :: &
       iS
+      
+    if ( .not. S % AllocatedDevice ) &
+      return
       
     if ( S % AllocatedValue ) then
       call UpdateDevice &
@@ -360,6 +420,9 @@ contains
     
     integer ( KDI ) :: &
       iS
+      
+    if ( .not. S % AllocatedDevice ) &
+      return
     
     call Search ( S % iaSelected, iV, iS )
     call UpdateDevice &
@@ -376,6 +439,9 @@ contains
       
     integer ( KDI ) :: &
       iS
+    
+    if ( .not. S % AllocatedDevice ) &
+      return
       
     if ( S % AllocatedValue ) then
       call UpdateHost ( S % D_Selected ( 1 ), S % Value )
@@ -398,11 +464,61 @@ contains
     
     integer ( KDI ) :: &
       iS
+      
+    if ( .not. S % AllocatedDevice ) &
+      return
     
     call Search ( S % iaSelected, iV, iS )
     call UpdateHost ( S % D_Selected ( iS ), S % Value ( :, iV ) )
   
   end subroutine UpdateHostSingle
+  
+  
+  subroutine ShowAssociation ( S, Description )
+  
+    class ( StorageForm ), intent ( inout ) :: &
+      S
+    character ( * ), intent ( in ) :: &
+      Description
+    
+    integer ( KDI ) :: &
+      iV
+    integer ( KBI ) :: &
+      D_Address, &
+      H_Address
+    character ( LDN ) :: &
+      IndexLabel
+    character ( LDB ) :: &
+      D_AddressStr, &
+      H_AddressStr
+      
+    print '(a35)', trim ( Description )
+
+    print '(a20, a20, a20)', &
+      'Index   ', &
+      'Host Address        ', &
+      'Device Address      '
+
+    do iV = 1, S % nVariables 
+      write ( IndexLabel, fmt = '( i7 )' ) iV
+      
+      D_Address = transfer ( S % D_Selected ( iV ), 1_KBI )
+      write ( D_AddressStr, fmt = ' ( z64 ) ' ) D_Address
+      D_AddressStr = '0x' //  adjustl ( D_AddressStr )
+      
+      H_Address &
+        = transfer ( c_loc ( S % Value ( :, S % iaSelected ( iV ) ) ), &
+                     1_KBI )
+      write ( H_AddressStr, fmt = ' ( z64 ) ' ) H_Address
+      H_AddressStr = '0x' //  adjustl ( H_AddressStr )
+      
+      print &
+        '(a20, a20, a20)', &
+        '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) = ', &
+        H_AddressStr, D_AddressStr
+    end do
+  
+  end subroutine ShowAssociation
   
   
   impure elemental subroutine Finalize ( S )
@@ -422,10 +538,8 @@ contains
     if ( allocated ( S % Unit ) )       deallocate ( S % Unit )
     
     if ( allocated ( S % D_Selected ) ) then
-      if ( S % AllocatedValue ) then
-        do iV = 1, S % nVariables
-          call DeallocateDevice ( S % D_Selected ( iV ) )
-        end do
+      if ( S % AllocatedValue .and. S % AllocatedDevice ) then
+        call DeallocateDevice ( S % D_Selected ( 1 ) )
       end if
       deallocate ( S % D_Selected )
     end if
@@ -459,7 +573,7 @@ contains
       S
     type ( Integer_1D_Form ), dimension ( : ), intent ( in ), optional ::&
       VectorIndicesOption
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ), optional :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ), optional :: &
       UnitOption
     character ( * ), dimension ( : ), intent ( in ), optional :: &
       VectorOption, &
@@ -524,6 +638,103 @@ contains
     if ( present ( UnitOption ) ) S % Unit = UnitOption
     
   end subroutine InitializeOptionalMembers
+  
+  
+  subroutine AdjustNonPrimary_D_Selected ( S )
+  
+    class ( StorageForm ), intent ( inout ) :: &
+      S
+    
+    integer ( KDI ) :: &
+      iS_T, iS_S, &
+      iV
+    
+    if ( .not. associated ( S % Primary ) ) &
+      return
+    
+    S % AllocatedDevice = S % Primary % AllocatedDevice
+    
+    if ( .not. S % AllocatedDevice ) &
+      return 
+    
+    S % D_Selected = c_null_ptr
+    do iS_T = 1, S % nVariables
+      iV = S % iaSelected ( iS_T )
+      do iS_S = 1, S % Primary % nVariables
+        if ( iV == S % Primary % iaSelected ( iS_S ) ) then
+          S % D_Selected ( iS_T ) &
+            = S % Primary % D_Selected ( iS_S )
+          exit
+        end if
+      end do
+    end do
+  
+  end subroutine AdjustNonPrimary_D_Selected
+  
+  
+  subroutine AssociateHost_S ( S, AssociateVariables )
+    
+    class ( StorageForm ), intent ( inout ) :: &
+      S
+    logical ( KDL ), intent ( in ) :: &
+      AssociateVariables
+      
+    integer ( KDI ) :: &
+      iV
+    real ( KDR ), dimension ( : ), pointer :: &
+      Variable
+    real ( KDR ), dimension ( :, : ), pointer :: &
+      D_Scratch
+      
+    !-- AssociateHost_S assumes S is primary
+    
+    if ( AssociateVariables ) then
+      
+      !-- Associate individual variables (columns of S % Value ) on host
+      !   to locations on device.
+
+      call c_f_pointer &
+             ( S % D_Value, D_Scratch, &
+               [ S % nValues, S % nVariables ] )
+
+      do iV = 1, S % nVariables
+        S % D_Selected ( iV ) = c_loc ( D_Scratch ( :, iV ) )
+        Variable => S % Value ( :, iV )
+        call AssociateHost ( S % D_Selected ( iV ), Variable )
+      end do
+
+    else
+
+      !-- Associate S % Value (as an entire block) on host to the head
+      !   location on the device.
+      
+      S % D_Selected ( 1 ) = S % D_Value
+      call AssociateHost ( S % D_Selected ( 1 ), S % Value )
+
+    end if !-- AssociateVariables
+
+  end subroutine AssociateHost_S
+  
+  
+  subroutine DisassociateHost_S ( S )
+    
+    class ( StorageForm ), intent ( inout ) :: &
+      S
+    
+    integer ( KDI ) :: &
+      iV
+    real ( KDR ), dimension ( : ), pointer :: &
+      Variable
+    
+    do iV = 1, S % nVariables
+      if ( c_associated ( S % D_Selected ( iV ) ) ) then
+        Variable => S % Value ( :, iV )
+        call DisassociateHost ( Variable )
+        S % D_Selected ( iV ) = c_null_ptr
+      end if 
+    end do
+        
+  end subroutine DisassociateHost_S
 
 
 end module Storage_Form

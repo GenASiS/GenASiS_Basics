@@ -15,7 +15,7 @@ module Show_Command
     ShowCharacter_KBCH
 
   interface Show
-    module procedure ShowInteger
+    module procedure ShowInteger_0D
     module procedure ShowInteger_1D
     module procedure ShowInteger_2D
     module procedure ShowBigInteger
@@ -36,16 +36,16 @@ module Show_Command
     module procedure ShowComplex_3D
     module procedure ShowLogical
     module procedure ShowLogical_1D
-    module procedure ShowCharacter
+    module procedure ShowCharacter_0D
 !    module procedure ShowCharacter_KBCH
     module procedure ShowCharacterNoDescription
     module procedure ShowCharacter_1D
     module procedure Show_C_Pointer
     module procedure Show_C_Pointer_1D
-    module procedure ShowMeasuredValue
-    module procedure ShowMeasuredValueConvertUnit
-    module procedure ShowMeasuredValue_1D
-    module procedure ShowMeasuredValue_1D_ConvertUnit
+    module procedure ShowQuantity
+    module procedure ShowQuantityConvertUnit
+    module procedure ShowQuantity_1D
+    module procedure ShowQuantity_1D_ConvertUnit
   end interface Show
 
     private :: &
@@ -55,7 +55,7 @@ module Show_Command
 contains
 
 
-  subroutine ShowInteger &
+  subroutine ShowInteger_0D &
                ( Integer, Description, IgnorabilityOption, &
                  DisplayRankOption, nLeadingLinesOption, &
                  nTrailingLinesOption )
@@ -86,13 +86,13 @@ contains
 
     call EndShow ( nTrailingLinesOption )
 
-  end subroutine ShowInteger
+  end subroutine ShowInteger_0D
 
 
   subroutine ShowInteger_1D &
                ( Integer, Description, IgnorabilityOption, &
                  DisplayRankOption, nLeadingLinesOption, &
-                 nTrailingLinesOption )
+                 nTrailingLinesOption, lIntegerOption )
 
     !-- Convention on argument order violated because the Integer being
     !   "Show"n is more important than the Description.
@@ -105,10 +105,12 @@ contains
       IgnorabilityOption, &
       DisplayRankOption, &
       nLeadingLinesOption, &
-      nTrailingLinesOption
+      nTrailingLinesOption, &
+      lIntegerOption
 
     integer ( KDI ) :: &
-      i
+      i, &
+      oI
     logical ( KDL ) :: &
       AbortShow
     character ( LDN ) :: &
@@ -120,9 +122,13 @@ contains
 
     if ( AbortShow ) return
 
+    oI  =  0
+    if ( present ( lIntegerOption ) ) &
+      oI  =  lIntegerOption - 1
+
     print '(a35)', trim ( Description )
     do i = 1, size ( Integer )
-      write ( IndexLabel, fmt = '( i7 )' ) i
+      write ( IndexLabel, fmt = '( i7 )' ) oI + i
       print &
         '(a38,i10)', &
         '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', Integer ( i )
@@ -420,7 +426,7 @@ contains
   
   subroutine ShowReal_1D &
                ( Real, Description, IgnorabilityOption, DisplayRankOption, &
-                 nLeadingLinesOption, nTrailingLinesOption )
+                 nLeadingLinesOption, nTrailingLinesOption, lRealOption )
 
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Description.
@@ -433,10 +439,12 @@ contains
       IgnorabilityOption, &
       DisplayRankOption, &
       nLeadingLinesOption, &
-      nTrailingLinesOption
+      nTrailingLinesOption, &
+      lRealOption
 
     integer ( KDI ) :: &
-      i
+      i, &
+      oR
     logical ( KDL ) :: &
       AbortShow
     character ( LDN ) :: &
@@ -448,9 +456,13 @@ contains
 
     if ( AbortShow ) return
 
+    oR  =  0
+    if ( present ( lRealOption ) ) &
+      oR  =  lRealOption - 1
+
     print '(a35)', trim ( Description )
     do i = 1, size ( Real )
-      write ( IndexLabel, fmt = '( i7 )' ) i
+      write ( IndexLabel, fmt = '( i7 )' ) oR + i
       print &
         '(a38,es15.6e3)', &
         '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', Real ( i )
@@ -606,7 +618,7 @@ contains
 
     real ( KDR ), intent ( in ) :: &
       Real
-    type ( MeasuredValueForm ), intent ( in ) :: &
+    type ( QuantityForm ), intent ( in ) :: &
       Unit
     character ( * ), intent ( in ) :: &
       Description
@@ -616,7 +628,7 @@ contains
       nLeadingLinesOption, &
       nTrailingLinesOption
     
-    type ( MeasuredValueForm ) :: &
+    type ( QuantityForm ) :: &
       MV
     
     if ( KBCH > KDCH ) then
@@ -643,7 +655,7 @@ contains
 
     real ( KDR ), dimension ( : ), intent ( in ) :: &
       Real
-    type ( MeasuredValueForm ), intent ( in ) :: &
+    type ( QuantityForm ), intent ( in ) :: &
       Unit
     character ( * ), intent ( in ) :: &
       Description
@@ -657,7 +669,7 @@ contains
       iV
     !-- FIXME: Made this allocatable instead of automatic array due to 
     !          PGI 11.10 bug
-    type ( MeasuredValueForm ), dimension ( : ), allocatable :: &
+    type ( QuantityForm ), dimension ( : ), allocatable :: &
       MV
       
     allocate ( MV ( size ( Real ) ) )
@@ -689,7 +701,7 @@ contains
 
     real ( KDR ), dimension ( : ), intent ( in ) :: &
       Real
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ) :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ) :: &
       Unit
     character ( * ), intent ( in ) :: &
       Description
@@ -701,7 +713,7 @@ contains
     
     integer ( KDI ) :: &
       iV
-    type ( MeasuredValueForm ), dimension ( size ( Real ) ) :: &
+    type ( QuantityForm ), dimension ( size ( Real ) ) :: &
       MV
     
     do iV = 1, size ( Real )
@@ -954,7 +966,7 @@ contains
   end subroutine ShowLogical_1D
 
 
-  subroutine ShowCharacter &
+  subroutine ShowCharacter_0D &
                ( Character, Description, IgnorabilityOption, &
                  DisplayRankOption, nLeadingLinesOption, &
                  nTrailingLinesOption )
@@ -981,7 +993,7 @@ contains
 
     call EndShow ( nTrailingLinesOption )
 
-  end subroutine ShowCharacter
+  end subroutine ShowCharacter_0D
   
   
   subroutine ShowCharacter_KBCH &
@@ -1212,16 +1224,16 @@ contains
   end subroutine Show_C_Pointer_1D
 
 
-  subroutine ShowMeasuredValue &
-              ( MeasuredValue, Description, IgnorabilityOption, &
+  subroutine ShowQuantity &
+              ( Quantity, Description, IgnorabilityOption, &
                 DisplayRankOption, nLeadingLinesOption, &
                 nTrailingLinesOption )
 
-    !-- Convention on argument order violated because the MeasuredValue being
+    !-- Convention on argument order violated because the Quantity being
     !   "Show"n is more important than the Description.
 
-    type ( MeasuredValueForm ), intent ( in ) :: &
-      MeasuredValue
+    type ( QuantityForm ), intent ( in ) :: &
+      Quantity
     character ( * ), intent ( in ) :: &
       Description
     integer ( KDI ), intent ( in ), optional :: &
@@ -1243,35 +1255,35 @@ contains
 
     if ( AbortShow ) return
 
-    if ( MeasuredValue % Label_UCS == KBCH_'' ) then
+    if ( Quantity % Label_UCS == KBCH_'' ) then
 
-      LenUnit = len_trim ( MeasuredValue % Unit_UCS ) + 1
+      LenUnit = len_trim ( Quantity % Unit_UCS ) + 1
       write ( PrintFormat, fmt = '(a18,i0,a1)' ) &
         '(a35,a3,es15.6e3,a', LenUnit, ')'
     
       print trim ( PrintFormat ), &
-        trim ( Description ), KBCH_'  =', MeasuredValue % Number, &
-        KBCH_' ' // trim ( MeasuredValue % Unit_UCS )
+        trim ( Description ), KBCH_'  =', Quantity % Number, &
+        KBCH_' ' // trim ( Quantity % Unit_UCS )
     
     else
 
       LenUnit &
-        = len_trim ( MeasuredValue % Unit_UCS ) + 1 &
-          + len_trim ( MeasuredValue % Label_UCS ) + 5
+        = len_trim ( Quantity % Unit_UCS ) + 1 &
+          + len_trim ( Quantity % Label_UCS ) + 5
       write ( PrintFormat, fmt = '(a18,i0,a2)' ) &
         '(a35,a3,es15.6e3,a', LenUnit, ')'
       
       print trim ( PrintFormat ), &
-        trim ( Description ), KBCH_'  =', MeasuredValue % Number, &
-        KBCH_' ' // trim ( MeasuredValue % Unit_UCS ) &
-        // KBCH_' ( ' // trim ( MeasuredValue % Label_UCS ) // KBCH_' )'
+        trim ( Description ), KBCH_'  =', Quantity % Number, &
+        KBCH_' ' // trim ( Quantity % Unit_UCS ) &
+        // KBCH_' ( ' // trim ( Quantity % Label_UCS ) // KBCH_' )'
 
     end if
 
-  end subroutine ShowMeasuredValue
+  end subroutine ShowQuantity
   
   
-  subroutine ShowMeasuredValueConvertUnit &
+  subroutine ShowQuantityConvertUnit &
                ( MV_Source, Unit, Description, IgnorabilityOption, &
                  DisplayRankOption, nLeadingLinesOption, &
                  nTrailingLinesOption )
@@ -1279,9 +1291,9 @@ contains
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.
 
-    type ( MeasuredValueForm ), intent ( in ) :: &
+    type ( QuantityForm ), intent ( in ) :: &
       MV_Source
-    type ( MeasuredValueForm ), intent ( in ) :: &
+    type ( QuantityForm ), intent ( in ) :: &
       Unit
     character ( * ), intent ( in ) :: &
       Description
@@ -1291,7 +1303,7 @@ contains
       nLeadingLinesOption, &
       nTrailingLinesOption
     
-    type ( MeasuredValueForm ) :: &
+    type ( QuantityForm ) :: &
       MV
     
     if ( KBCH > KDCH ) then
@@ -1306,19 +1318,19 @@ contains
     call Show ( MV, Description, IgnorabilityOption, DisplayRankOption, &
                 nLeadingLinesOption, nTrailingLinesOption )
 
-  end subroutine ShowMeasuredValueConvertUnit
+  end subroutine ShowQuantityConvertUnit
   
   
-  subroutine ShowMeasuredValue_1D &
-              ( MeasuredValue, Description, IgnorabilityOption, &
+  subroutine ShowQuantity_1D &
+              ( Quantity, Description, IgnorabilityOption, &
                 DisplayRankOption, nLeadingLinesOption, &
                 nTrailingLinesOption )
 
-    !-- Convention on argument order violated because the MeasuredValue being
+    !-- Convention on argument order violated because the Quantity being
     !   "Show"n is more important than the Description.
 
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ) :: &
-      MeasuredValue
+    type ( QuantityForm ), dimension ( : ), intent ( in ) :: &
+      Quantity
     character ( * ), intent ( in ) :: &
       Description
     integer ( KDI ), intent ( in ), optional :: &
@@ -1345,12 +1357,12 @@ contains
     
     print '(a35)', trim ( Description )
     
-    do i = 1, size ( MeasuredValue )
+    do i = 1, size ( Quantity )
 
-      if ( MeasuredValue ( i ) % Label_UCS == KBCH_'' ) then
+      if ( Quantity ( i ) % Label_UCS == KBCH_'' ) then
 
         LenUnit &
-          = len_trim ( MeasuredValue ( i ) % Unit_UCS ) + 1
+          = len_trim ( Quantity ( i ) % Unit_UCS ) + 1
         write ( PrintFormat, fmt = '(a18,i0,a1)' ) &
           '(a38,es15.6e3,a', LenUnit, ')'
       
@@ -1358,14 +1370,14 @@ contains
         print &
           trim ( PrintFormat ), &
           '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', &
-          MeasuredValue ( i ) % Number, &
-          KBCH_' ' // trim ( MeasuredValue ( i ) % Unit_UCS )
+          Quantity ( i ) % Number, &
+          KBCH_' ' // trim ( Quantity ( i ) % Unit_UCS )
 
       else
 
         LenUnit &
-          = len_trim ( MeasuredValue ( i ) % Unit_UCS ) + 1 &
-            + len_trim ( MeasuredValue ( i ) % Label_UCS ) + 5
+          = len_trim ( Quantity ( i ) % Unit_UCS ) + 1 &
+            + len_trim ( Quantity ( i ) % Label_UCS ) + 5
         write ( PrintFormat, fmt = '(a18,i0,a2)' ) &
           '(a38,es15.6e3,a', LenUnit, ')'
       
@@ -1373,19 +1385,19 @@ contains
         print &
           trim ( PrintFormat ), &
           '( ' // trim ( adjustl ( IndexLabel ) ) // ' ) =', &
-          MeasuredValue ( i ) % Number, &
-          KBCH_' ' // trim ( MeasuredValue ( i ) % Unit_UCS ) &
-          // KBCH_' ( ' // trim ( MeasuredValue ( i ) % Label_UCS ) &
+          Quantity ( i ) % Number, &
+          KBCH_' ' // trim ( Quantity ( i ) % Unit_UCS ) &
+          // KBCH_' ( ' // trim ( Quantity ( i ) % Label_UCS ) &
           // KBCH_' )'
 
       end if
     
     end do
       
-  end subroutine ShowMeasuredValue_1D
+  end subroutine ShowQuantity_1D
   
   
-  subroutine ShowMeasuredValue_1D_ConvertUnit &
+  subroutine ShowQuantity_1D_ConvertUnit &
                ( MV_Source, Unit, Description, IgnorabilityOption, &
                  DisplayRankOption, nLeadingLinesOption, &
                  nTrailingLinesOption )
@@ -1393,9 +1405,9 @@ contains
     !-- Convention on argument order violated because the Real being
     !   "Show"n is more important than the Unit or the Description.
 
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ) :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ) :: &
       MV_Source
-    type ( MeasuredValueForm ), dimension ( : ), intent ( in ) :: &
+    type ( QuantityForm ), dimension ( : ), intent ( in ) :: &
       Unit
     character ( * ), intent ( in ) :: &
       Description
@@ -1407,7 +1419,7 @@ contains
     
     integer ( KDI ) :: &
       iMV
-    type ( MeasuredValueForm ), dimension ( size ( MV_Source ) ) :: &
+    type ( QuantityForm ), dimension ( size ( MV_Source ) ) :: &
       MV
     
     do iMV = 1, size ( MV_Source )
@@ -1426,7 +1438,7 @@ contains
            ( MV, Description, IgnorabilityOption, DisplayRankOption, &
              nLeadingLinesOption, nTrailingLinesOption )
 
-  end subroutine ShowMeasuredValue_1D_ConvertUnit
+  end subroutine ShowQuantity_1D_ConvertUnit
   
   
   subroutine PrepareShow &

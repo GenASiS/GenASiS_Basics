@@ -91,44 +91,31 @@ program DirectoryDifference
     else if ( trim ( GIS_1 % ContentList ( 1 ) ) == 'Grid' ) then
       allocate ( StructuredGridImageForm :: GI_1 )
       allocate ( StructuredGridImageForm :: GI_2 )
-      allocate ( GI_O, source = GI_1 )
+      allocate ( StructuredGridImageForm :: GI_O )
     end if
     
-    call Show ( GIS_1 % ContentList, 'ContentList 1' )
-      
     call GI_1 % Initialize ( GIS_1 )
-    call GI_1 % SetReadAttributes &
-           ( Directory = trim ( GIS_1 % ContentList ( 1 ) ), oValue = 0 )
+    call GI_1 % SetDirectory ( trim ( GIS_1 % ContentList ( 1 ) ) )
     call GI_1 % Read ( )
     
     call GIS_1 % Close ( )
    
-    call Show ( GIS_1 % ContentList, 'ContentList 2' )
-    
     call GIS_2 % Open ( GIS_2 % ACCESS_READ, NumberOption = iFile )
     call GIS_2 % ListContents ( ContentTypeOption = 'Directory' )
     
     call GI_2 % Initialize ( GIS_2 )
-    call GI_2 % SetReadAttributes &
-           ( Directory = trim ( GIS_2 % ContentList ( 1 ) ), oValue = 0 )
+    call GI_2 % SetDirectory ( trim ( GIS_2 % ContentList ( 1 ) ) )
     call GI_2 % Read ( )
     
     call GIS_2 % Close ( )
     
-    
-    call Show ( '<<< GIS_2 close' )
     call GIS_O % Open &
            ( GIS_O % ACCESS_CREATE, SeriesOption = .true., &
              NumberOption = iFile )
     
-    !call Show ( '<<< Stream opened' )
-    !call GI_O % Initialize ( GIS_O )
-    GI_O % Stream => GIS_O
-             
-    call Show ( '<<< GI Initialized' )
+    call GI_O % Initialize ( GIS_O )
+
     allocate ( Storage ( GI_1 % nStorages ) )
-    call Show ( '<<<< Storages allocated' )
-    
     
     select type ( GI_1 )
     type is ( CurveImageForm )
@@ -143,25 +130,35 @@ program DirectoryDifference
                   - GI_1 % oProperCellNodeHigh, 1 )
     end select
     
-    !select type ( GI_O )
-    !type is ( StructuredGridImageForm )
-    !  select type ( GI_1 )
-    !  type is ( StructuredGridImageForm )
-    !    call Show ( GIS_1 % ContentList, 'ContentList 3' )
-    !    call GI_O % SetGrid &
-    !           ( Directory = 'Grid', &
-    !             NodeCoordinate &
-    !               = reshape ( [ GI_1 % NodeCoordinate_1, &
-    !                             GI_1 % NodeCoordinate_2, &
-    !                             GI_1 % NodeCoordinate_3 ], &
-    !                           [ size ( GI_1 % NodeCoordinate_1 ), 3 ], &
-    !                           pad = [ 0.0_KDR ] ), &
-    !             nDimensions = GI_1 % nDimensions, &
-    !             nProperCells = GI_1 % nTotalCells - GI_1 % nGhostCells, &
-    !             nGhostCells = GI_1 % nGhostCells, &
-    !             oValue = 0, nCells = GI_1 % nCells )
-    !  end select 
-    !end select
+    select type ( GI_O )
+    
+    type is ( CurveImageForm )
+      select type ( GI_1 )
+      type is ( CurveImageForm )
+        call GI_O % SetGridWrite &
+                ( Directory = 'Curve', &
+                  NodeCoordinate = GI_1 % NodeCoordinate_1, &
+                  nProperCells = nProperCells ( 1 ), oValue = 0 )
+      end select
+      
+    type is ( StructuredGridImageForm )
+      select type ( GI_1 )
+      type is ( StructuredGridImageForm )
+        call GI_O % SetGridWrite &
+               ( Directory = 'Grid', &
+                 NodeCoordinate &
+                   = reshape ( [ GI_1 % NodeCoordinate_1, &
+                                 GI_1 % NodeCoordinate_2, &
+                                 GI_1 % NodeCoordinate_3 ], &
+                               [ size ( GI_1 % NodeCoordinate_1 ), 3 ], &
+                               pad = [ 0.0_KDR ] ), &
+                 nDimensions = GI_1 % nDimensions, &
+                 nProperCells = GI_1 % nTotalCells - GI_1 % nGhostCells, &
+                 nGhostCells = GI_1 % nGhostCells, &
+                 oValue = 0, nCells = GI_1 % nCells )
+      end select 
+    
+    end select
       
     !-- Calculate and write the differences  
     do iS = 1, GI_1 % nStorages
@@ -171,16 +168,13 @@ program DirectoryDifference
           S_2 => GI_2 % Storage ( iS ), &
           S_O => Storage ( iS ) )
       
-      call Show ( '<<<< initializin storage' )
       call S_O % Initialize &
              ( shape ( S_1 % Value ), &
                VectorIndicesOption = S_1 % VectorIndices, &
                UnitOption = S_1 % Unit, VectorOption = S_1 % Vector, &
                VariableOption = S_1 % Variable, NameOption = S_1 % Name, &
                ClearOption = .true. )
-      call Show ( '<<<< storage initialized' )
-      !call GI_O % AddStorage ( Storage ( iS ) )
-      !call Show ( '<<<< storage added' )
+      call GI_O % AddStorage ( Storage ( iS ) )
       
       allocate ( L1_Error ( S_1 % nVariables ) )
       
@@ -207,9 +201,6 @@ program DirectoryDifference
                             1 : nProperCells ( 2 ), &
                             1 : nProperCells ( 3 ) ) )
         
-        !-- Avoid computing fractional differences for vanishing variable
-        if ( V_1 ( 1, 1, 1 ) == 0.0_KDR ) cycle
-        
         associate &
           ( V_1_P => V_1 ( 1 : nProperCells ( 1 ), &
                            1 : nProperCells ( 2 ), &
@@ -220,8 +211,14 @@ program DirectoryDifference
             V_O_P => V_O ( 1 : nProperCells ( 1 ), &
                            1 : nProperCells ( 2 ), &
                            1 : nProperCells ( 3 ) ) ) 
-                           
-          V_O_P = ( V_2_P - V_1_P ) / V_1_P
+          
+          !-- Do not compute fractional difference on cells with zero
+          where ( V_1_P > 0.0_KDR )
+            V_O_P = ( V_2_P - V_1_P ) / V_1_P
+          elsewhere 
+            V_O_P = 0.0_KDR
+          end where
+            
         end associate 
         
       end do  !-- nVariables
@@ -236,10 +233,7 @@ program DirectoryDifference
     end do    !-- nStorages
     
     call GI_O % Write ( )
-    !GI_1 % Stream => GIS_O
-    !call GI_1 % Write ( )
     
-    call Show ('<<<< closing stream' )
     call GIS_O % Close ( )
     
     deallocate ( Storage )
@@ -253,26 +247,6 @@ program DirectoryDifference
   deallocate ( GIS_O )
   deallocate ( GIS_1 ) 
   deallocate ( GIS_2 )
-    
-  
-    
-!  allocate ( GIS )
-!  
-!  call GIS % Initialize &
-!         ( trim ( Filename ) // '_Difference', PH % Communicator, &
-!           WorkingDirectoryOption = OutputDirectory_1 )
-!  
-!  call GIS % Open ( GIS % ACCESS_CREATE, SeriesOption = .false. )
-!  
-!  GI_1 % Stream => GIS
-!  call GI_1 % Write ( )
-!  
-!  call GIS % Close ( )
-!  
-!  deallocate ( GI_2 )
-!  deallocate ( GI_1 )
-!  
-!  deallocate ( GIS )
   
   deallocate ( PROGRAM_HEADER )
   

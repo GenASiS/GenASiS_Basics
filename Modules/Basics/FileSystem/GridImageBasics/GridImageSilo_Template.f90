@@ -31,6 +31,8 @@ module GridImageSilo_Template
     procedure, public, pass :: &
       Initialize
     procedure, public, pass :: &
+      SetDirectory
+    procedure, public, pass :: &
       WriteHeader
     procedure, public, pass :: &
       WriteMultiMesh
@@ -40,8 +42,6 @@ module GridImageSilo_Template
       WriteVectorVariable
     procedure ( WriteInterface ), public, pass, deferred :: &
       Write
-    procedure ( SetReadAttributesInterface ), public, pass, deferred :: &
-      SetReadAttributes
     procedure, public, pass :: &
       ReadHeader
     procedure ( ReadInterface ), public, pass, deferred :: &
@@ -51,34 +51,26 @@ module GridImageSilo_Template
   
   abstract interface 
   
-    subroutine SetReadAttributesInterface ( GI, Directory, oValue )
-      use Specifiers
-      import GridImageSiloTemplate
-      class ( GridImageSiloTemplate ), intent ( inout ) :: &
-        GI  
-      character ( * ), intent ( in ) :: &
-        Directory
-      integer ( KDI ), intent ( in ) :: &
-        oValue
-    end subroutine
-    
     subroutine WriteInterface ( GI, TimeOption, CycleNumberOption )
       use Specifiers
       import GridImageSiloTemplate
       class ( GridImageSiloTemplate ), intent ( inout ) :: &
         GI
-      type ( MeasuredValueForm ), intent ( in ), optional :: &
+      type ( QuantityForm ), intent ( in ), optional :: &
         TimeOption
       integer ( KDI ), intent ( in ), optional :: &
         CycleNumberOption
     end subroutine WriteInterface
     
-    subroutine ReadInterface ( GI, TimeOption, CycleNumberOption )
+    subroutine ReadInterface &
+                 ( GI, StorageOnlyOption, TimeOption, CycleNumberOption )
       use Specifiers
       import GridImageSiloTemplate
       class ( GridImageSiloTemplate ), intent ( inout ) :: &
         GI
-      type ( MeasuredValueForm ), intent ( out ), optional :: &
+      logical ( KDL ), intent ( in ), optional :: &
+        StorageOnlyOption
+      type ( QuantityForm ), intent ( out ), optional :: &
         TimeOption
       integer ( KDI ), intent ( out ), optional :: &
         CycleNumberOption
@@ -99,6 +91,19 @@ contains
     GI % Stream => S
   
   end subroutine Initialize
+  
+  
+  subroutine SetDirectory ( GI, Directory )
+  
+    class ( GridImageSiloTemplate ), intent ( inout ) :: &
+      GI
+    character ( * ), intent ( in ) :: &
+      Directory
+    
+    GI % lDirectory  = len_trim ( Directory )
+    GI % Directory   = Directory
+  
+  end subroutine SetDirectory
 
   
   subroutine WriteHeader ( GI, TimeOption, CycleNumberOption )
@@ -109,7 +114,7 @@ contains
   
     class ( GridImageSiloTemplate ), intent ( inout ) :: &
       GI
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
@@ -183,7 +188,7 @@ contains
       GI
     character ( * ), intent ( in ) :: &
       Name
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
@@ -264,7 +269,7 @@ contains
       GI
     character ( * ), intent ( in ) :: &
       Name
-    type ( MeasuredValueForm ), intent ( in ), optional :: &
+    type ( QuantityForm ), intent ( in ), optional :: &
       TimeOption
     integer ( KDI ), intent ( in ), optional :: &
       CycleNumberOption
@@ -394,7 +399,7 @@ contains
   
     class ( GridImageSiloTemplate ), intent ( inout ) :: &
       GI
-    type ( MeasuredValueForm ), intent ( out ), optional :: &
+    type ( QuantityForm ), intent ( out ), optional :: &
       TimeOption
     integer ( KDI ), intent ( out ), optional :: &
       CycleNumberOption

@@ -9,14 +9,14 @@ module Timer_Form
 
   type, public :: TimerForm
     integer ( KDI ) :: &
-      Level
-    type ( MeasuredValueForm ) :: &
+      iStart = 0, &
+      Level, &
+      Handle = -1
+    type ( QuantityForm ) :: &
       StartTime, &
       StopTime, &
       TimeInterval, &
       TotalTime
-    logical ( KDL ) :: &
-      Running = .false.
     character ( LDL ) :: &
       Name = ''
   contains
@@ -36,13 +36,13 @@ module Timer_Form
       ShowTotal
   end type TimerForm
 
-    character ( 8 ), private, parameter :: &
-      Suffix = '::::::::'
+    character ( 10 ), private, parameter :: &
+      Suffix = '::::::::::'
     
 contains
 
 
-  subroutine InitializeNameLevel ( T, Name, Level )
+  subroutine InitializeNameLevel ( T, Name, Level, HandleOption )
 
     class ( TimerForm ), intent ( inout ) :: &
       T
@@ -50,9 +50,28 @@ contains
       Name
     integer ( KDI ), intent ( in ) :: &
       Level
+    integer ( KDI ), intent ( in ), optional :: &
+      HandleOption
 
-    T % Name  = Name
-    T % Level = Level
+    integer ( KDI ) :: &
+      oName, &
+      LabelLength
+    character ( LDL ) :: &
+      TruncatedName
+
+    LabelLength  =  35  !-- Show_Command
+
+    !-- Truncate the beginning of the name to maintain proper indentation
+    TruncatedName  =  Name
+    if ( len_trim ( Name )  + 1 + Level  >  LabelLength ) then
+      oName  =  len_trim ( Name )  + 1 + Level  -  LabelLength
+      TruncatedName  =  Name ( oName + 1 : )
+    end if
+
+    T % Name   =  TruncatedName
+    T % Level  =  Level
+    if ( present ( HandleOption ) ) &
+      T % Handle  =  HandleOption
 
     call T % StartTime % Initialize ( 's', 0.0_KDR )
     call T % StopTime % Initialize ( 's', 0.0_KDR )
@@ -69,8 +88,9 @@ contains
     class ( TimerForm ), intent ( in ) :: &
       T_Target
 
-    T % Name  = T_Target % Name
-    T % Level = T_Target % Level
+    T % Name    =  T_Target % Name
+    T % Level   =  T_Target % Level
+    T % Handle  =  T_Target % Handle
 
     call T % StartTime % Initialize ( 's', 0.0_KDR )
     call T % StopTime % Initialize ( 's', 0.0_KDR )
@@ -85,11 +105,10 @@ contains
     class ( TimerForm ), intent ( inout ) :: &
       T
 
-    if ( T % Running ) return
+    if ( T % iStart  ==  0 ) &
+      T % StartTime  =  WallTime ( )
 
-    T % StartTime = WallTime ( )
-
-    T % Running = .true.
+    T % iStart  =  T % iStart + 1
 
   end subroutine Start
 
@@ -99,14 +118,16 @@ contains
     class ( TimerForm ), intent ( inout ) :: &
       T
 
-    if ( .not. T % Running ) return
+    T % iStart  =  max ( T % iStart - 1, 0 )
 
-    T % StopTime = WallTime ( )
+    if ( T % iStart == 0 ) then
 
-    T % TimeInterval  =  T % StopTime   -  T % StartTime
-    T % TotalTime     =  T % TotalTime  +  T % TimeInterval
+      T % StopTime = WallTime ( )
 
-    T % Running = .false.
+      T % TimeInterval  =  T % StopTime   -  T % StartTime
+      T % TotalTime     =  T % TotalTime  +  T % TimeInterval
+
+    end if
 
   end subroutine Stop
 
