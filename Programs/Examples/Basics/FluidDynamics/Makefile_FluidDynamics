@@ -4,7 +4,8 @@ PATH_GENASIS = ../../../../..
 HDF5_DIR = 
 LAPACK_DIR = 
 
-all: SineWaveAdvection SawtoothWaveAdvection RiemannProblem
+all: SineWaveAdvection SawtoothWaveAdvection RiemannProblem \
+     KelvinHelmholtz
 
 include $(PATH_GENASIS)/Build/Makefile_Build
 
@@ -40,6 +41,12 @@ RiemannProblem: Basics.a Fluid.a RiemannProblem.o
           RiemannProblem.o RiemannProblem_Form.o \
           Fluid.a Basics.a $(LIBRARIES)
 
+KelvinHelmholtz: Basics.a Fluid.a KelvinHelmholtz.o
+	$(LINK) $(FLAGS) \
+          -o KelvinHelmholtz_$(MACHINE) \
+          KelvinHelmholtz.o KelvinHelmholtz_Form.o \
+          Fluid.a Basics.a $(LIBRARIES)
+
 clean:
 	rm -f *.o *.a *.mod *.ld *.smod
 
@@ -47,6 +54,7 @@ clobber: clean
 	find . -type f $(FIND_EXEC) -name 'SineWaveAdvection_*' -exec rm -f '{}' \;
 	find . -type f $(FIND_EXEC) -name 'SawtoothWaveAdvection_*' -exec rm -f '{}' \;
 	find . -type f $(FIND_EXEC) -name 'RiemannProblem_*' -exec rm -f '{}' \;
+	find . -type f $(FIND_EXEC) -name 'KelvinHelmholtz_*' -exec rm -f '{}' \;
 
 include $(PATH_BASICS)/Makefile_Dependencies
 
@@ -143,3 +151,14 @@ RiemannProblem.o: \
   Basics.o \
   RiemannProblem_Form.o \
   RiemannProblem.f90
+
+KelvinHelmholtz_Form.o: \
+  Basics.o \
+  PolytropicFluid_Form.o \
+  ConservationLawEvolution_Template.o \
+  KelvinHelmholtz_Form.f90
+
+KelvinHelmholtz.o: \
+  Basics.o \
+  KelvinHelmholtz_Form.o \
+  KelvinHelmholtz.f90
